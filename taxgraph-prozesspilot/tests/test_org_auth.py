@@ -36,6 +36,11 @@ def test_three_roles_and_org_isolation(tmp_path, monkeypatch):
         assert client.get("/api/config",headers=r).json()["capabilities"]["publish_process"]
         assert client.post("/api/graphs/umwstg20-v1/draft",headers=a,json={"actor":"x"}).status_code==403
         assert client.post("/api/graphs/umwstg20-v1/draft",headers=b,json={"actor":"x"}).status_code==404
+        new_proc=client.post("/api/processes",headers=e,json={"label":"Neue Fallprüfung"}).json()
+        assert new_proc["meta"]["status"]=="draft"
+        assert new_proc["meta"]["org_id"]=="demo"
+        assert client.post("/api/processes",headers=r,json={"label":"Unzulässig"}).status_code==403
+        assert client.post("/api/processes",headers=a,json={"label":"Unzulässig"}).status_code==403
         draft=client.post("/api/graphs/umwstg20-v1/draft",headers=e,json={"actor":"spoof"}).json()
         assert draft["meta"]["created_by"]=="edit-a"
         did=draft["meta"]["id"]
@@ -65,4 +70,6 @@ def test_password_rejection(tmp_path,monkeypatch):
     monkeypatch.setenv("APP_ENV","production")
     with TestClient(app) as client:
         assert client.get("/api/graphs",headers=h("reader","wrong-password-123")).status_code==401
-        assert client.get("/api/procedural-map",headers=h("reader","correct-password-123")).status_code==200
+        mapping=client.get("/api/procedural-map",headers=h("reader","correct-password-123")).json()
+        assert mapping["source"]["version"]=="v3"
+        assert any(x["external_id"]=="c_aufstockung" for x in mapping["mapping"])
