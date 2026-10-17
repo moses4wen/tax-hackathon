@@ -14,7 +14,9 @@ const outcomeDE = {yes:"Ja",no:"Nein",unknown:"Unbekannt",pending:"Ausstehend",a
 const auditTypeDE = {RUN_STARTED:"Prüflauf gestartet",NODE_ENTERED:"Knoten betreten",SIGNAL_EVALUATED:"Prüfkriterium ausgewertet",GUARDS_EVALUATED:"Kantenbedingungen geprüft",EDGE_SELECTED:"Kante gewählt",CALCULATION:"Berechnung",RECOMMENDATION:"Empfehlung erstellt",RUN_FINISHED:"Prüflauf abgeschlossen"};
 
 async function api(path, options={}) {
-  const response = await fetch(path, {headers:{"Content-Type":"application/json"},credentials:"same-origin",...options});
+  const headers = new Headers(options.headers || {});
+  headers.set("Content-Type", "application/json");
+  const response = await fetch(path, {...options,headers,credentials:"same-origin"});
   const text = await response.text();
   let data; try { data = JSON.parse(text); } catch { data = {detail:text.slice(0,200)}; }
   if(!response.ok) throw new Error(typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail||data));
@@ -59,8 +61,31 @@ async function boot(){
 function can(cap){return !!state.config?.capabilities?.[cap];}
 function applyPermissions(){
   const identity=state.config.identity||{};
+  const demoRoles=state.config.demo_roles||[];
   const label=$('identityLabel');
-  if(label)label.textContent=(identity.username||'Demo')+' · '+(identity.org_id||'demo')+' · '+(identity.role||'reviewer');
+  const roleLabel=demoRoles.find(role=>role.value===identity.role)?.label||identity.role||'viewer';
+  if(label)label.textContent=(identity.username||'Demo')+' · '+(identity.org_id||'demo')+' · '+roleLabel;
+  const roleControl=$('demoRoleControl'), roleSelect=$('demoRoleSelect');
+  const switchEnabled=state.config.demo_role_switch===true;
+  roleControl.hidden=!switchEnabled;
+  if(switchEnabled){
+    roleSelect.innerHTML=demoRoles.map(role=>'<option value="'+h(role.value)+'">'+h(role.label)+'</option>').join('');
+    roleSelect.value=identity.role;
+    if(!roleSelect.dataset.bound){
+      roleSelect.addEventListener('change',event=>{
+        const role=event.target.value;
+        if(!demoRoles.some(item=>item.value===role))return;
+        if(state.dirty&&!window.confirm('Nicht gespeicherte Änderungen verwerfen, um die Demorolle zu wechseln?')){
+          event.target.value=identity.role;return;
+        }
+        document.cookie='demo_role='+encodeURIComponent(role)+'; Path=/; SameSite=Lax';
+        state.dirty=false;
+        window.location.reload();
+      });
+      roleSelect.dataset.bound='true';
+    }
+  }
+  $('expertReviewLink').hidden=!can('approve_case');
   for(const id of ['newCaseBtn'])$(id).hidden=!can('edit_case') || !can('create_process');
   for(const id of ['saveBtn','runBtn'])$(id).hidden=!can('edit_case');
   $('draftBtn').hidden=!can('edit_process');

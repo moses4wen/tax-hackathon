@@ -1,5 +1,13 @@
 # Änderungsprotokoll
 
+## Functional Integration V3 - 17.10.2026
+
+- Integrated current process library and version-pinned legal orchestration; original V1/V2 executors retained.
+- 17 source-node bindings, explicit normalized DAG, four-state guards, immutable source import and case/run review snapshots.
+- BMF 20.19/20.19a minimum valuation, negative-net-asset uplift and explicit actual-date fallback.
+- Organization/role checks, stale-write protection, publication reference tests and replayable learning demonstration.
+- Verification and external-source limitations documented in docs/FUNCTIONAL-INTEGRATION.md.
+
 ## Unveröffentlicht — 17.10.2026
 
 - Auditprüfung um vollständige Ereignisfolge, deterministische Wiederholung, eingefrorene Quellen und menschliche Fachentscheidung erweitert; eigenständiger JSON-Prüfer unter `scripts/verify_audit.py`.

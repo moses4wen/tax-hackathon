@@ -34,8 +34,8 @@ def test_three_roles_and_org_isolation(tmp_path, monkeypatch):
         assert client.get("/api/config",headers=a).json()["capabilities"]["edit_process"] is False
         assert client.get("/api/config",headers=e).json()["capabilities"]["create_process"]
         assert client.get("/api/config",headers=r).json()["capabilities"]["publish_process"]
-        assert client.post("/api/graphs/umwstg20-v1/draft",headers=a,json={"actor":"x"}).status_code==403
-        assert client.post("/api/graphs/umwstg20-v1/draft",headers=b,json={"actor":"x"}).status_code==404
+        assert client.post("/api/graphs/umwstg20-v1/draft",headers=a,json={"actor":"spoofed-author"}).status_code==403
+        assert client.post("/api/graphs/umwstg20-v1/draft",headers=b,json={"actor":"spoofed-author"}).status_code==404
         new_proc=client.post("/api/processes",headers=e,json={"label":"Neue Fallprüfung"}).json()
         assert new_proc["meta"]["status"]=="draft"
         assert new_proc["meta"]["org_id"]=="demo"
@@ -73,3 +73,30 @@ def test_password_rejection(tmp_path,monkeypatch):
         mapping=client.get("/api/procedural-map",headers=h("reader","correct-password-123")).json()
         assert mapping["source"]["version"]=="v3"
         assert any(x["external_id"]=="c_aufstockung" for x in mapping["mapping"])
+
+
+def test_demo_role_switch_is_cookie_controlled_and_nonproduction_only(tmp_path, monkeypatch):
+    monkeypatch.setenv("DATABASE_PATH", str(tmp_path/"demo-role.db"))
+    monkeypatch.setenv("APP_ENV", "local")
+    monkeypatch.setenv("APP_USER", "demo-user")
+    monkeypatch.setenv("APP_LOCAL_ROLE", "editor")
+    monkeypatch.setenv("APP_DEMO_ROLE_SWITCH", "1")
+    monkeypatch.delenv("APP_PASSWORD", raising=False)
+    init_db()
+    with TestClient(app) as client:
+        default = client.get("/api/config").json()
+        assert default["identity"]["role"] == "editor"
+        assert default["demo_role_switch"] is True
+        assert {role["value"] for role in default["demo_roles"]} == {"viewer", "editor", "reviewer"}
+        assert default["capabilities"]["edit_case"] is True
+        assert default["capabilities"]["publish_process"] is False
+        reviewer = client.get("/api/config", cookies={"demo_role": "reviewer"}).json()
+        assert reviewer["identity"]["role"] == "reviewer"
+        assert reviewer["capabilities"]["publish_process"] is True
+        viewer = client.get("/api/config", cookies={"demo_role": "viewer"}).json()
+        assert viewer["identity"]["role"] == "viewer"
+        assert viewer["capabilities"]["edit_case"] is False
+        invalid = client.get("/api/config", cookies={"demo_role": "owner"}).json()
+        assert invalid["identity"]["role"] == "editor"
+        monkeypatch.setenv("APP_ENV", "production")
+        assert client.get("/api/config", cookies={"demo_role": "reviewer"}).status_code == 401

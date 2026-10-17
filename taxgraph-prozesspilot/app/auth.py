@@ -20,6 +20,7 @@ from fastapi import HTTPException, Request
 from .storage import connect
 
 ROLES = ("viewer", "editor", "reviewer")
+ROLE_LABELS = {"viewer": "Nur lesen", "editor": "Standardnutzer", "reviewer": "Fachprüfer"}
 WRITE_ROLES = ("editor", "reviewer")
 _AUTH_SALT_BYTES = 16
 _SCRYPT_N = 2**14
@@ -68,8 +69,14 @@ def authenticate(header: str) -> Principal | None:
     return Principal(row["username"], row["org_id"], row["role"])
 
 
-def local_principal() -> Principal:
-    return Principal(os.getenv("APP_USER", "Demo Reviewer"), "demo", "reviewer")
+def local_principal(role: str | None = None) -> Principal:
+    default_role = os.getenv("APP_LOCAL_ROLE", "reviewer").strip().lower()
+    if default_role not in ROLES:
+        default_role = "viewer"
+    selected_role = role.strip().lower() if isinstance(role, str) else default_role
+    if selected_role not in ROLES:
+        selected_role = default_role
+    return Principal(os.getenv("APP_USER", "Demo Reviewer"), "demo", selected_role)
 
 
 def current(request: Request) -> Principal:
@@ -122,6 +129,9 @@ def create_org(c: sqlite3.Connection, org_id: str, label: str) -> None:
     write_graph(c, uid("g"), "org/" + org_id + "/umwstg20", 1, seed_graph(),
                 "published", "Systemdemo", "Synthetisches Referenzmodell", org_id=org_id)
     seed_cases(c, org_id=org_id)
+    from .functional_api import seed_org
+    if c.execute("SELECT 1 FROM sqlite_master WHERE name='process_packages'").fetchone():
+        seed_org(c, org_id)
 
 
 def create_user(c: sqlite3.Connection, username: str, org_id: str, role: str, password: str) -> None:
