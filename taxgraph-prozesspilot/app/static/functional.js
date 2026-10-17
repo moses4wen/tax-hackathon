@@ -116,7 +116,7 @@ function fillSample(negative){
 }
 async function boot(){
  S.schema=await api('/api/functional/schema');const u=S.schema.identity;
- $('identity').textContent=`${u.username} / ${u.org_id} / ${{viewer:'Leser',editor:'Autor',reviewer:'Reviewer'}[u.role]}`;
+ $('identity').textContent=`${u.org_id} / ${{viewer:'Leser',editor:'Autor',reviewer:'Reviewer'}[u.role]}`;
  $('newProcess').hidden=!can('create_process');$('editorTab').hidden=!can('edit_process');
  S.cases=(await api('/api/cases')).cases;$('caseSelect').innerHTML=S.cases.map(c=>`<option value="${h(c.id)}">${h(c.title)}</option>`).join('');
  await processes();const first=S.cases.find(c=>c.title.includes('Musterfall A'))||S.cases[0];if(first){$('caseSelect').value=first.id;await selectCase(first.id);}
