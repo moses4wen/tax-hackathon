@@ -24,6 +24,7 @@
         <div class="top-separator"></div>
         <span class="env-tag"><span class="env-dot"></span> SYNTHETISCHE FALLDATEN</span>
         <span id="healthBadge" class="health-badge">System wird geladen …</span>
+        <span id="identityLabel" class="env-tag" aria-label="Benutzer und Organisation"></span>
         <a class="api-link" href="/fachpruefung" title="Erweiterte Fachprüfung">Fachprüfung §20 V2 ↗</a>
         <a class="api-link" href="/api/docs" target="_blank" rel="noopener noreferrer" title="OpenAPI-Dokumentation">API <span aria-hidden="true">↗</span></a>
       </div>
@@ -60,6 +61,7 @@
           <button role="tab" class="tab active" id="tab-workspace" data-tab="workspace" aria-selected="true">Arbeitsbereich</button>
           <button role="tab" class="tab" id="tab-audit" data-tab="audit" aria-selected="false">Prüfpfad &amp; Bericht</button>
           <button role="tab" class="tab" id="tab-model" data-tab="model" aria-selected="false">Prozessmodell verwalten</button>
+          <a class="api-link" href="/api/procedural-map" target="_blank" rel="noopener">Graph-Mapping v3 ↗</a>
         </div>
         <div id="workspaceView" class="view view-active">
           <div class="workspace-grid">
@@ -106,7 +108,7 @@
         </div>
         <div id="modelView" class="view" hidden>
           <div class="model-grid">
-            <section class="card"><div class="card-top"><div><div class="mini-eyebrow">VERSIONIERUNG</div><h2>Graphversionen</h2></div><button id="draftBtn" class="button button-secondary button-small">+ Entwurf erstellen</button></div><div class="intro-box">Veröffentlichte Versionen sind unveränderlich. Änderungen erfolgen in einem neuen Entwurf. Ausgeführte Fälle bleiben ihrer ursprünglichen Version zugeordnet.</div><div id="versionsList" class="version-list"></div><div class="model-warning"><strong>Wichtig:</strong> Die strukturelle Validierung ersetzt keine Prüfung durch eine Steuerberatungsperson.</div></section>
+            <section class="card"><div class="card-top"><div><div class="mini-eyebrow">VERSIONIERUNG</div><h2>Graphversionen</h2></div><button id="createProcessBtn" class="button button-secondary" type="button">Neuen Prozess anlegen</button><button id="draftBtn" class="button button-secondary button-small">+ Entwurf erstellen</button></div><div class="intro-box">Veröffentlichte Versionen sind unveränderlich. Änderungen erfolgen in einem neuen Entwurf. Ausgeführte Fälle bleiben ihrer ursprünglichen Version zugeordnet.</div><div id="versionsList" class="version-list"></div><div class="model-warning"><strong>Wichtig:</strong> Die strukturelle Validierung ersetzt keine Prüfung durch eine Steuerberatungsperson.</div></section>
             <section class="card editor-card"><div class="card-top"><div><div class="mini-eyebrow">TYPISIERTER PROZESSGRAPH</div><h2>Knoten &amp; Kanten</h2></div><span id="editorStatus" class="type-tag">Lesemodus</span></div><p class="help-text">JSON enthält alle Prozessknoten, Kanten, Bedingungen, Guidance, Fallstricke und Rechtsquellen-IDs. Die Ausführungsengine erlaubt nur definierte Guard-Signale.</p><textarea id="graphEditor" spellcheck="false" aria-label="Graph JSON Editor"></textarea><div class="editor-buttons"><button id="validateGraphBtn" class="button button-secondary">Struktur prüfen</button><button id="saveGraphBtn" class="button button-secondary">Entwurf speichern</button><button id="publishGraphBtn" class="button button-primary">Veröffentlichen</button></div><div id="graphValidation" class="validation-box"></div><div class="revision-head"><span class="mini-eyebrow">ÄNDERUNGSHISTORIE</span><button id="exportGraphBtn" class="button button-secondary button-small">Graph-JSON exportieren ↓</button></div><div id="revisionHistory" class="revision-history"></div></section>
           </div>
         </div>

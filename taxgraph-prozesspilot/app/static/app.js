@@ -44,7 +44,8 @@ function reviewHTML(run){
 async function boot(){
   try {
     const [conf, graphList, caseList] = await Promise.all([api('/api/config'), api('/api/graphs'),api('/api/cases')]);
-    state.config=conf;$('appVersion').textContent=conf.version;state.versions=graphList.graphs;state.cases=caseList.cases;
+    state.config=conf;$('appVersion').textContent=conf.version;
+    applyPermissions();state.versions=graphList.graphs;state.cases=caseList.cases;
     $('healthBadge').textContent='System bereit';$('healthBadge').classList.add('ready');
     state.graphVersion=state.versions.find(v=>v.status==='published')?.id || 'umwstg20-v1';
     state.editorVersion=state.graphVersion;
@@ -54,6 +55,19 @@ async function boot(){
     renderEditorVersionList();
     await loadEditor(state.editorVersion);
   } catch(e) { $('healthBadge').textContent='Systemfehler';toast('Initialisierung: '+e.message,true); }
+}
+function can(cap){return !!state.config?.capabilities?.[cap];}
+function applyPermissions(){
+  const identity=state.config.identity||{};
+  const label=$('identityLabel');
+  if(label)label.textContent=(identity.username||'Demo')+' · '+(identity.org_id||'demo')+' · '+(identity.role||'reviewer');
+  for(const id of ['newCaseBtn'])$(id).hidden=!can('edit_case') || !can('create_process');
+  for(const id of ['saveBtn','runBtn'])$(id).hidden=!can('edit_case');
+  $('draftBtn').hidden=!can('edit_process');
+  $('createProcessBtn').hidden=!can('create_process');
+  $('saveGraphBtn').hidden=!can('edit_process');
+  $('publishGraphBtn').hidden=!can('publish_process');
+  document.querySelectorAll('[data-tab="model"]').forEach(b=>b.hidden=!(can('edit_process')||can('publish_process')));
 }
 async function refreshCaseList(){state.cases=(await api('/api/cases')).cases;renderCaseList();}
 function renderCaseList(){
@@ -96,7 +110,7 @@ function renderFacts(){
     const status=`<select class="fact-control verification" data-part="verification" aria-label="${h(meta.label)} – Nachweisstatus"><option value="unknown" ${fact.verification==='unknown'?'selected':''}>Unbekannt</option><option value="reported" ${fact.verification==='reported'?'selected':''}>Ungeprüft</option><option value="confirmed" ${fact.verification==='confirmed'?'selected':''}>Bestätigt</option></select>`;
     return `<div class="fact-field" data-key="${h(meta.key)}"><label class="fact-title">${h(meta.label)}</label><div class="fact-controls">${main}${status}</div><input data-part="evidence" aria-label="${h(meta.label)} – Nachweisreferenz" class="fact-control fact-evidence" value="${h(fact.evidence_ref)}" placeholder="Belegreferenz oder Aktenvermerk …"/><div class="fact-help">${h(meta.help)}</div>${fact.observations?.length?`<p class="help-text">${fact.observations.length} zusätzliche Beobachtung(en) gespeichert. Fachliche Klärung erforderlich; Ausführung gesperrt. Speichern erhält diese Nachweise.</p>`:''}</div>`;
   }).join('')}</div>`).join('');
-  $('factsForm').querySelectorAll('input,select').forEach(el=>el.addEventListener('input',()=>{state.dirty=true;renderCasesDetail();}));
+  $('factsForm').querySelectorAll('input,select').forEach(el=>{el.disabled=!can('edit_case');el.addEventListener('input',()=>{state.dirty=true;renderCasesDetail();});});
 }
 function readFactInputs(){
   return [...$('factsForm').querySelectorAll('.fact-field')].map(row=>{
@@ -112,7 +126,7 @@ function readFactInputs(){
   });
 }
 async function saveCase(silent=false){
-  if(!state.case)return;
+  if(!state.case||!can('edit_case'))return;
   const payload={facts:readFactInputs(),actor:'Lokale Bearbeitung'};
   const result=await api(`/api/cases/${state.case.id}/facts`,{method:'PUT',body:JSON.stringify(payload)});
   state.case=result;state.dirty=false;renderCasesDetail();
@@ -137,7 +151,7 @@ function renderFindings(){
   if(!res){$('recommendationPanel').innerHTML='<div class="empty-result"><div class="empty-result-icon">↗</div><strong>Noch kein Prüfergebnis</strong><p>Fallangaben prüfen und die Ausführung starten. Das Ergebnis basiert auf einem versionierten Prozessgraphen.</p></div>';}
   else {
     const missing=res.missing_evidence.length ? `<div class="result-section"><h4>FEHLENDE NACHWEISE</h4><ul>${res.missing_evidence.map(v=>`<li>${h(v)}</li>`).join('')}</ul></div>` : '';
-    $('recommendationPanel').innerHTML=`<div class="result-hl"><h3>${h(res.title)}</h3><p>${h(res.assessment)}</p></div><div class="result-section"><h4>EMPFOHLENER NÄCHSTER SCHRITT</h4><div class="result-action">${h(res.recommended_action)}</div>${res.status==='FREIGABE_OFFEN'?'<div class="review-actions"><button data-review="approved" class="button button-secondary button-small">Freigabe dokumentieren</button><button data-review="rejected" class="button button-secondary button-small">Ablehnung dokumentieren</button></div>':''}</div>${missing}<div class="result-section"><h4>RECHNERISCHE WERTDIFFERENZ</h4><p>${res.valuation?.available?`${deMoney(res.valuation.fair_value)} − ${deMoney(res.valuation.book_value)} = <b>${deMoney(res.valuation.difference)}</b>`:'Noch nicht belegt.'}</p></div><div class="result-section"><h4>RISIKEN & HINWEISE</h4><ul>${res.warnings.map(v=>`<li>${h(v)}</li>`).join('')}</ul></div>`;
+    $('recommendationPanel').innerHTML=`<div class="result-hl"><h3>${h(res.title)}</h3><p>${h(res.assessment)}</p></div><div class="result-section"><h4>EMPFOHLENER NÄCHSTER SCHRITT</h4><div class="result-action">${h(res.recommended_action)}</div>${res.status==='FREIGABE_OFFEN' && can('approve_case')?'<div class="review-actions"><button data-review="approved" class="button button-secondary button-small">Freigabe dokumentieren</button><button data-review="rejected" class="button button-secondary button-small">Ablehnung dokumentieren</button></div>':''}</div>${missing}<div class="result-section"><h4>RECHNERISCHE WERTDIFFERENZ</h4><p>${res.valuation?.available?`${deMoney(res.valuation.fair_value)} − ${deMoney(res.valuation.book_value)} = <b>${deMoney(res.valuation.difference)}</b>`:'Noch nicht belegt.'}</p></div><div class="result-section"><h4>RISIKEN & HINWEISE</h4><ul>${res.warnings.map(v=>`<li>${h(v)}</li>`).join('')}</ul></div>`;
   }
   renderInspector();updateRunNotice();
 }
@@ -187,9 +201,9 @@ function renderEditorVersionList(){
 async function loadEditor(id){
   const graph=await api(`/api/graphs/${id}`);state.editorVersion=id;state.editorGraph=graph;
   $('graphEditor').value=JSON.stringify({label:graph.label,nodes:graph.nodes,edges:graph.edges},null,2);
-  const draft=graph.meta.status==='draft';$('graphEditor').readOnly=!draft;
+  const draft=graph.meta.status==='draft';$('graphEditor').readOnly=!draft||!can('edit_process');
   $('editorStatus').textContent=draft?'Entwurf – bearbeitbar':'Veröffentlicht – gesperrt';
-  $('saveGraphBtn').disabled=!draft;$('publishGraphBtn').disabled=!draft;
+  $('saveGraphBtn').disabled=!draft||!can('edit_process');$('publishGraphBtn').disabled=!draft||!can('publish_process');
   $('graphValidation').textContent=`Version ${graph.meta.version} · ${graph.nodes.length} Knoten · ${graph.edges.length} Kanten\nChecksumme: ${graph.meta.checksum||'Entwurf (noch ohne Veröffentlichungs-Hash)'}`;
   $('graphValidation').className='validation-box';
   try {

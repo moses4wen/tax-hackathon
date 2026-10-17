@@ -13,6 +13,7 @@ from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation, ROUND_DOWN
 from pathlib import Path
 from typing import Any, Mapping
+from .procedural_map import catalog as procedural_catalog
 
 ENGINE_VERSION = "2.0.0-demo"
 LAW_AS_OF = "2026-10-17"
@@ -617,6 +618,7 @@ def assess(raw_facts: Mapping[str, Any], *, as_of: str = LAW_AS_OF) -> dict:
         "warnings": warnings,
         "source_urls": {key: {"title": v[0], "url": v[1]} for key, v in SOURCES.items()},
         "professional_approval": "PENDING_NOT_SUPPORTED_BY_AUTOMATION",
+        "procedural_map": procedural_catalog(),
     }
     result["graph_hash"] = _hash(graph)
     result["facts_hash"] = _hash(f)

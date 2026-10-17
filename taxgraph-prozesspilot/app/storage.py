@@ -105,6 +105,19 @@ def init_db() -> None:
             c.execute("ALTER TABLE cases ADD COLUMN context_id TEXT NOT NULL DEFAULT 'demo-2026'")
         if "observations_json" not in {r[1] for r in c.execute("PRAGMA table_info(case_facts)")}:
             c.execute("ALTER TABLE case_facts ADD COLUMN observations_json TEXT NOT NULL DEFAULT '[]'")
+        c.executescript("""
+            CREATE TABLE IF NOT EXISTS orgs (id TEXT PRIMARY KEY, name TEXT NOT NULL, created_at TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS app_users (
+              username TEXT PRIMARY KEY, org_id TEXT NOT NULL REFERENCES orgs(id),
+              role TEXT NOT NULL CHECK(role IN ('viewer','editor','reviewer')),
+              password_hash TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL);
+        """)
+        c.execute("INSERT OR IGNORE INTO orgs VALUES('demo','Demo Organisation',?)", (now(),))
+        for table in ("graph_versions", "cases"):
+            if "org_id" not in {r[1] for r in c.execute("PRAGMA table_info(" + table + ")")}:
+                c.execute("ALTER TABLE " + table + " ADD COLUMN org_id TEXT NOT NULL DEFAULT 'demo'")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_graph_org ON graph_versions(org_id,status)")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_case_org ON cases(org_id)")
         first = c.execute("SELECT id FROM graph_versions LIMIT 1").fetchone()
         if not first:
             graph = seed_graph()
@@ -114,16 +127,16 @@ def init_db() -> None:
 
 
 def write_graph(c: sqlite3.Connection, version_id: str, slug: str, version: int, graph: dict,
-                status: str, actor: str, note: str = "") -> dict:
+                status: str, actor: str, note: str = "", *, org_id: str = "demo") -> dict:
     errors = validate_graph(graph)
     if errors:
         raise ValueError("; ".join(errors))
     checksum = graph_checksum(graph) if status == "published" else None
     time = now()
-    c.execute("""INSERT INTO graph_versions(id,slug,version,label,status,checksum,created_at,created_by,approved_at,approved_by)
-              VALUES(?,?,?,?,?,?,?,?,?,?)""",
+    c.execute("""INSERT INTO graph_versions(id,slug,version,label,status,checksum,created_at,created_by,approved_at,approved_by,org_id)
+              VALUES(?,?,?,?,?,?,?,?,?,?,?)""",
               (version_id, slug, version, graph.get("label", slug), status, checksum, time, actor,
-               time if status == "published" else None, actor if status == "published" else None))
+               time if status == "published" else None, actor if status == "published" else None, org_id))
     insert_graph_parts(c, version_id, graph)
     record_graph_revision(c, version_id, graph, actor, note or "Initiale Graphversion", {"initial": True})
     activity(c, "graph", version_id, "GRAPH_CREATED" if status == "draft" else "GRAPH_PUBLISHED",
@@ -237,7 +250,7 @@ def make_draft(c: sqlite3.Connection, source_id: str, actor: str) -> dict:
     version = c.execute("SELECT COALESCE(MAX(version),0)+1 FROM graph_versions WHERE slug=?", (slug,)).fetchone()[0]
     new_id = uid("g")
     graph = {k:source[k] for k in ("label", "nodes", "edges")}
-    write_graph(c, new_id, slug, version, graph, "draft", actor)
+    write_graph(c, new_id, slug, version, graph, "draft", actor, org_id=source["meta"]["org_id"])
     return load_graph(c, new_id)
 
 
@@ -257,8 +270,9 @@ def publish_draft(c: sqlite3.Connection, version_id: str, actor: str) -> dict:
     return load_graph(c, version_id)
 
 
-def list_graphs(c: sqlite3.Connection) -> list[dict]:
-    return [dict(row) for row in c.execute("SELECT * FROM graph_versions ORDER BY version DESC")]
+def list_graphs(c: sqlite3.Connection, org_id: str = "demo", *, published_only: bool = False) -> list[dict]:
+    query = "SELECT * FROM graph_versions WHERE org_id=?" + (" AND status='published'" if published_only else "") + " ORDER BY version DESC"
+    return [dict(row) for row in c.execute(query, (org_id,))]
 
 
 def default_facts(context_id: str = CURRENT_CONTEXT, *, extended: bool = False) -> list[dict]:
@@ -318,7 +332,7 @@ def parse_fact(item: dict) -> dict:
 
 def create_case(c: sqlite3.Connection, title: str, description: str = "", *, actor: str = "Benutzer",
                 facts: list[dict] | None = None, synthetic: bool = True, context_id: str = CURRENT_CONTEXT,
-                extended: bool = False) -> str:
+                extended: bool = False, org_id: str = "demo") -> str:
     title = title.strip()
     if not 2 <= len(title) <= 180:
         raise ValueError("Fallbezeichnung muss 2–180 Zeichen enthalten.")
@@ -326,8 +340,8 @@ def create_case(c: sqlite3.Connection, title: str, description: str = "", *, act
     if context_id not in CONTEXT_FIELDS:
         raise ValueError("Unbekannter rechtlicher Fallkontext.")
     time = now()
-    c.execute("INSERT INTO cases(id,title,description,synthetic,created_at,updated_at,context_id) VALUES(?,?,?,?,?,?,?)",
-              (case_id, title, description[:3000], int(synthetic), time, time, context_id))
+    c.execute("INSERT INTO cases(id,title,description,synthetic,created_at,updated_at,context_id,org_id) VALUES(?,?,?,?,?,?,?,?)",
+              (case_id, title, description[:3000], int(synthetic), time, time, context_id, org_id))
     fact_list = facts if facts is not None else default_facts(context_id, extended=extended)
     parsed = [parse_fact(item) for item in fact_list]
     if len({f["key"] for f in parsed}) != len(parsed):
@@ -456,7 +470,7 @@ def verify_run(c: sqlite3.Connection, run_id: str) -> dict:
     return verify_execution(run, original_graph)
 
 
-def seed_cases(c: sqlite3.Connection) -> None:
+def seed_cases(c: sqlite3.Connection, *, org_id: str = "demo") -> None:
     sample = {
         "asset_type": "betrieb", "receiving_company": True, "new_shares": True, "essential_assets": True,
         "future_corporate_tax": True, "assets_ge_liabilities": True, "german_tax_right": True,
@@ -472,7 +486,7 @@ def seed_cases(c: sqlite3.Connection) -> None:
             entries.append({"key": key, "value": value, "verification": status,
                             "evidence_ref": f"SYNTHETISCH: Fallannahme / Musterbeleg {key}" if status == "confirmed" else ""})
         return entries
-    create_case(c, "Musterfall A · Buchwertprüfung", "Fiktive Ausgliederung Mustermann Handwerk e. K. in eine GmbH; Buchwert 100.000 €, gemeiner Wert 400.000 €.", actor="Systemdemo", facts=filled({}))
-    create_case(c, "Musterfall B · Betriebsgrundlage fehlt", "Variante mit zurückbehaltener wesentlicher Betriebsgrundlage; § 20 Anwendungsbereich fraglich.", actor="Systemdemo", facts=filled({"essential_assets": False}))
-    create_case(c, "Musterfall C · Nachweis fehlt", "Unklar, ob neue GmbH-Anteile als Gegenleistung zugeteilt werden.", actor="Systemdemo", facts=filled({"new_shares": True}, reported={"new_shares"}))
-    create_case(c, "Musterfall D · Veräußerungsrisiko", "Innerhalb von zwei Jahren ist ein Anteilverkauf geplant; gesondertes § 22 Risiko.", actor="Systemdemo", facts=filled({"planned_disposal": True}))
+    create_case(c, "Musterfall A · Buchwertprüfung", "Fiktive Ausgliederung Mustermann Handwerk e. K. in eine GmbH; Buchwert 100.000 €, gemeiner Wert 400.000 €.", actor="Systemdemo", org_id=org_id, facts=filled({}))
+    create_case(c, "Musterfall B · Betriebsgrundlage fehlt", "Variante mit zurückbehaltener wesentlicher Betriebsgrundlage; § 20 Anwendungsbereich fraglich.", actor="Systemdemo", org_id=org_id, facts=filled({"essential_assets": False}))
+    create_case(c, "Musterfall C · Nachweis fehlt", "Unklar, ob neue GmbH-Anteile als Gegenleistung zugeteilt werden.", actor="Systemdemo", org_id=org_id, facts=filled({"new_shares": True}, reported={"new_shares"}))
+    create_case(c, "Musterfall D · Veräußerungsrisiko", "Innerhalb von zwei Jahren ist ein Anteilverkauf geplant; gesondertes § 22 Risiko.", actor="Systemdemo", org_id=org_id, facts=filled({"planned_disposal": True}))
