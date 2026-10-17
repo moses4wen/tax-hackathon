@@ -14,6 +14,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+from .legal_review_api import router as legal_review_router
 from .engine import execute
 from .audit import source_snapshot
 from .model import APP_VERSION, FACT_FIELDS, HANDLER_FACTS, LEGAL, SIGNAL_FACTS, sha256, validate_graph
@@ -35,6 +36,8 @@ async def lifespan(_app: FastAPI):
 app = FastAPI(title="ProzessPilot §20 UmwStG", description="Auditierbarer deutscher Steuer-Prozessgraph (synthetisches MVP)",
               version=APP_VERSION, lifespan=lifespan, docs_url="/api/docs", openapi_url="/api/openapi.json", redoc_url=None)
 app.mount("/assets", StaticFiles(directory=str(STATIC)), name="assets")
+# Fachpruefung-V2 additive integration
+app.include_router(legal_review_router)
 
 
 @app.middleware("http")

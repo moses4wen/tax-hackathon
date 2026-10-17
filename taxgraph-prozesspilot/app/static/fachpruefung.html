@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="de-DE">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>ProzessPilot · Fachprüfung § 20 UmwStG</title>
+  <style>
+    :root{font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;color:#182b36;background:#f1f5f7}
+    *{box-sizing:border-box}body{margin:0}button,input,select{font:inherit}header{background:#112c37;color:#fff;padding:14px 25px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+    header strong{font-size:20px}header small{display:block;color:#9bb4bf;font-size:11px;letter-spacing:1.5px;margin-top:4px}
+    a{color:#0b6484;text-decoration:none}header a{color:#dceff9;font-size:13px}main{max-width:1550px;margin:24px auto;padding:0 22px}
+    h1{font-size:28px;letter-spacing:-.8px;margin:0 0 6px}h2{font-size:17px;margin:0 0 14px}h3{font-size:14px;margin:14px 0 8px}p{line-height:1.5}
+    .sub{font-size:13px;color:#637785;margin:0 0 20px}.split{display:grid;grid-template-columns:minmax(290px,430px) minmax(0,1fr);gap:18px;align-items:start}
+    .pane{background:white;border:1px solid #dbe4e8;border-radius:10px;padding:20px;box-shadow:0 2px 10px #0d283108}.stack{display:grid;gap:14px}
+    label{display:block;font-size:12px;font-weight:650;color:#455966;margin-bottom:6px}input,select{width:100%;padding:10px;border:1px solid #cbd8de;border-radius:6px;background:white;color:#172a35;font-size:13px}
+    input:focus,select:focus{outline:2px solid #83bcd5;outline-offset:1px}.field{padding:10px 0;border-bottom:1px solid #ecf1f2}.field:last-child{border-bottom:0}
+    .fact-row{display:grid;grid-template-columns:minmax(100px,1fr) 122px;gap:8px}.evidence{margin-top:8px}.muted{color:#647986;font-size:12px}
+    .group{padding-top:14px;margin-top:14px;border-top:1px solid #dbe4e8}.group:first-of-type{border-top:0;margin-top:0}.group h3{color:#0a607d;margin:0 0 6px;text-transform:uppercase;letter-spacing:.8px;font-size:11px}
+    .actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:15px}button{border:1px solid #beced5;border-radius:6px;padding:10px 13px;cursor:pointer;background:white;color:#143d50;font-weight:600;font-size:13px}
+    button.primary{background:#087c9d;border-color:#087c9d;color:#fff}button:disabled{opacity:.55;cursor:not-allowed}
+    .headrow{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}.notice{background:#eff8fa;border:1px solid #cae1e9;padding:12px 14px;border-radius:6px;color:#34586a;font-size:12px}
+    .stat{padding:14px;border:1px solid #e0e9ed;border-radius:8px}.status{font-size:11px;font-weight:700;letter-spacing:.3px;border-radius:5px;padding:5px 7px;display:inline-block;background:#e8edf0}
+    .SATISFIED,.READY_FOR_EXPERT_REVIEW{background:#e0f2e8;color:#16673e}.NOT_SATISFIED,.INELIGIBLE_SELECTED_PATH{background:#fce9e7;color:#a53026}
+    .UNKNOWN,.EVIDENCE_REQUIRED,.CONFLICTED,.CONFLICTED_EVIDENCE{background:#fff0d4;color:#885b00}
+    .tabs{display:flex;gap:8px;border-bottom:1px solid #dce6e9;padding-bottom:10px;flex-wrap:wrap;margin:16px 0}.tab[aria-selected=true]{background:#e9f5fa;border-color:#75b7d0}
+    table{width:100%;border-collapse:collapse;font-size:12px}th,td{text-align:left;border-bottom:1px solid #e7edf0;padding:9px 7px;vertical-align:top}th{font-size:11px;color:#667783}
+    .table-scroll{overflow:auto;max-height:390px}.assessment:hover,.graphrow:hover{background:#f5fafb;cursor:pointer}.pill{font-size:11px;background:#eef3f5;border-radius:4px;padding:4px 6px}
+    .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:8px}.metrics .stat strong{display:block;font-size:19px;margin:5px 0;word-break:break-all}
+    pre{overflow:auto;white-space:pre-wrap;word-break:break-word;font-size:11px;color:#364954;background:#f7fafb;border:1px solid #e5edf0;border-radius:6px;padding:12px;max-height:200px}
+    .searchline{display:flex;gap:8px;margin:12px 0;flex-wrap:wrap}.searchline input{flex:2}.searchline select{flex:1}
+    #neighbors{width:100%;background:#f9fcfd;border:1px solid #e5edf0;border-radius:6px;min-height:230px}#neighbors text{fill:#1c3542;font-size:11px}
+    #neighbors rect{fill:#eaf3f7;stroke:#8fb3c2;stroke-width:1}#neighbors .central{fill:#d2ebf5;stroke:#1983a5;stroke-width:2}
+    #neighbors line{stroke:#7896a4;stroke-width:1.5}#neighbors .edge-text{fill:#5a7483;font-size:8px}
+    .auditlinks{display:flex;flex-wrap:wrap;gap:6px}.auditlinks button{font-size:11px;padding:6px}.warning{color:#9a5b12}.error{background:#ffe4e0;color:#7e3128;padding:12px;border-radius:6px;font-size:12px}
+    .hidden{display:none!important}.foot{font-size:11px;color:#667987;margin:35px 0}
+    @media(max-width:1000px){.split{grid-template-columns:1fr}main{margin:14px auto;padding:0 12px}.pane{padding:14px}}
+  </style>
+  <script defer src="/assets/fachpruefung.js"></script>
+</head>
+<body>
+  <header><div><strong>prozesspilot <span style="font-weight:400">/ Fachprüfung</span></strong><small>§ 20 UmwStG · Prüfschema → Subsumtion → Rechtsfolgen</small></div><a href="/">← Zur Prozessübersicht</a></header>
+  <main>
+    <h1>Vollständigerer Prüfumfang · Musterfall Einzelunternehmen → GmbH</h1>
+    <p class="sub">Deterministische Ergänzung zur bestehenden Prozessprüfung. Jede Entscheidung mit Rechtsnorm, Tatbestandsmerkmal, Tatsachennachweis, Ergebnis und Rechenspur. Keine fachliche Steuerfreigabe.</p>
+    <div class="split">
+      <section class="pane">
+        <h2>01 / Fallakte &amp; zusätzliche Tatsachen</h2>
+        <label for="caseSelect">Synthetischer Fall aus ProzessPilot</label><select id="caseSelect"></select>
+        <p class="muted">Die bereits bestätigten Fallfakten werden aus der bestehenden Fallakte übernommen. Zusätzliche Felder verändern den ursprünglichen Fall nicht.</p>
+        <div class="notice">„Bestätigt“ ist nur zulässig, wenn eine Aktenreferenz vorliegt. Ein Referenztext prüft nicht die Echtheit. Für die Demo ausschließlich erfundene Daten verwenden.</div>
+        <div class="actions"><button id="demoBtn" type="button">Beispiel A synthetisch ergänzen</button><button id="clearBtn" type="button">Zusätze löschen</button></div>
+        <form id="reviewForm"><div id="fields"></div><div class="actions"><button class="primary" id="submitBtn" type="submit">Fachprüfung ausführen</button></div></form>
+      </section>
+      <div class="stack">
+        <section class="pane">
+          <div class="headrow"><h2>02 / Ergebnis &amp; Reproduzierbarkeit</h2><span id="integrity" class="pill">Noch kein Lauf</span></div>
+          <p id="resultIntro" class="muted">Fall auswählen, Zusatzangaben erfassen und eine Ausführung starten.</p>
+          <div id="outcome" class="hidden">
+            <div id="metrics" class="metrics"></div>
+            <div class="actions"><button id="exportBtn" type="button">Vollständigen Audit-JSON exportieren ↓</button><button id="loadLatestBtn" type="button">Letzte Prüfung laden</button></div>
+            <div class="tabs" role="tablist" aria-label="Fachprüfung Ansichten">
+              <button class="tab" data-view="pruefschema" aria-selected="true">Prüfschema</button>
+              <button class="tab" data-view="graph" aria-selected="false">Rechtsgraph</button>
+              <button class="tab" data-view="consequences" aria-selected="false">Steuerfolgen &amp; Audit</button>
+            </div>
+            <div id="view-pruefschema" class="report-view"><h3>Prüfergebnisse und Subsumtion</h3><div class="table-scroll" id="assessments"></div></div>
+            <div id="view-graph" class="report-view hidden">
+              <h3>Persistierte Legal Reasoning Nodes &amp; Edges</h3><p class="muted" id="graphInfo"></p>
+              <div class="searchline"><input id="nodeSearch" placeholder="Knoten-ID, Gesetz, Prüfkriterium …"><select id="nodeType"><option value="">Alle Knotentypen</option></select></div>
+              <div class="table-scroll" id="nodeList"></div><h3 id="inspectorName">Knoten-Inspector</h3>
+              <svg id="neighbors" role="img" viewBox="0 0 740 260" aria-label="Direkt verbundene Knoten und Kanten"></svg>
+              <div id="inspectorDetails"></div>
+            </div>
+            <div id="view-consequences" class="report-view hidden"><div id="taxReport"></div></div>
+          </div>
+          <div id="errorBox" class="error hidden" role="alert"></div>
+        </section>
+        <section class="pane"><h2>03 / Grenzen</h2><div class="notice">
+          § 20-Variante und finanzielle Werte sind illustrative, belegbedürftige Annahmen. § 23-AfA, § 27 KStG, § 16/§ 34/§ 17 EStG, komplexe § 22-Ersatzereignisse und vergangene Normfassungen erfordern eine qualifizierte Fachprüfung. Ein lokaler Hash ist keine manipulationssichere Archivierung.
+        </div></section>
+      </div>
+    </div>
+    <p class="foot">Nur Testdaten · Gesetzliche Quellen: gesetze-im-internet.de und BMF 02.01.2025 · Rechtlicher Stand der Demo: 17.10.2026</p>
+  </main>
+</body>
+</html>
