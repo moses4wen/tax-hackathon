@@ -1,6 +1,6 @@
 # Tax-Hackathon
 
-Dieses Repository enthält **ProzessPilot**, einen deutschsprachigen Prototyp für einen strukturierten Ablauf zu § 20 UmwStG. Die Anwendung liegt unter [`taxgraph-prozesspilot/`](taxgraph-prozesspilot/); das bestehende Startskript und die dortige Dokumentation beschreiben den lokalen Betrieb.
+Dieses Repository enthält **processGraph**, einen deutschsprachigen Prototyp für einen strukturierten Ablauf zu § 20 UmwStG. Die Anwendung liegt unter [`taxgraph-prozesspilot/`](taxgraph-prozesspilot/); das bestehende Startskript und die dortige Dokumentation beschreiben den lokalen Betrieb.
 
 Der Prototyp zeigt einen versionierten Prozessgraphen, fallbezogene Tatsachen und Nachweisverweise sowie eine prüfbare Ausführungshistorie. Veröffentlichte Graphdefinitionen, veränderlicher Fallzustand und fortlaufende Ausführungsprotokolle haben getrennte Aufgaben. Der aktuelle Ablauf bildet ein begrenztes Beispiel ab und ist weder eine vollständige Steuersoftware noch eine Steuerberatung.
 
