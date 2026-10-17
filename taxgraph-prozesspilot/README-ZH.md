@@ -1,4 +1,4 @@
-# processGraph：中文安装与使用说明
+# prozessGraph：中文安装与使用说明
 
 **这是一个可以本地运行、也可以部署到服务器的 §20 UmwStG Hackathon Web App。** App 用户界面全部使用德语。本仓库包含应用代码、测试、运行配置和文档。
 
@@ -9,7 +9,7 @@
 准备：Python 3.11+（推荐 3.12）和首次安装依赖所需的网络。
 
 ```bash
-unzip processgraph-hackathon.zip
+unzip prozessgraph-hackathon.zip
 cd taxgraph-prozesspilot
 chmod +x start-lokal.sh
 ./start-lokal.sh

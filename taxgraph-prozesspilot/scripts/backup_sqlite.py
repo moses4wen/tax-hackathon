@@ -9,7 +9,7 @@ from pathlib import Path
 source = Path(os.environ.get('DATABASE_PATH', './data/prozesspilot.sqlite3')).expanduser()
 if not source.exists():
     raise SystemExit(f'Datenbank nicht gefunden: {source}')
-destination = Path(sys.argv[1]) if len(sys.argv) > 1 else source.parent / 'backups' / f"processgraph-{datetime.now(timezone.utc):%Y%m%d-%H%M%S}.sqlite3"
+destination = Path(sys.argv[1]) if len(sys.argv) > 1 else source.parent / 'backups' / f"prozessgraph-{datetime.now(timezone.utc):%Y%m%d-%H%M%S}.sqlite3"
 destination.parent.mkdir(parents=True, exist_ok=True)
 if source.resolve() == destination.resolve():
     raise SystemExit('Backup darf die Quelldatenbank nicht überschreiben.')

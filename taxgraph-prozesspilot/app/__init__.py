@@ -1,1 +1,1 @@
-"""processGraph: auditierbarer Prozessgraph fuer § 20 UmwStG."""
+"""prozessGraph: auditierbarer Prozessgraph fuer § 20 UmwStG."""
