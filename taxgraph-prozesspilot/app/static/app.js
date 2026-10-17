@@ -64,6 +64,7 @@ function applyPermissions(){
   for(const id of ['newCaseBtn'])$(id).hidden=!can('edit_case') || !can('create_process');
   for(const id of ['saveBtn','runBtn'])$(id).hidden=!can('edit_case');
   $('draftBtn').hidden=!can('edit_process');
+  $('createProcessBtn').hidden=!can('create_process');
   $('saveGraphBtn').hidden=!can('edit_process');
   $('publishGraphBtn').hidden=!can('publish_process');
   document.querySelectorAll('[data-tab="model"]').forEach(b=>b.hidden=!(can('edit_process')||can('publish_process')));
