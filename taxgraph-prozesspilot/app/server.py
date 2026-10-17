@@ -19,8 +19,8 @@ from .auth import authenticate, current, local_principal, require_role, graph_ac
 from .procedural_map import catalog as procedural_catalog
 from .engine import execute
 from .audit import source_snapshot
-from .model import APP_VERSION, FACT_FIELDS, HANDLER_FACTS, LEGAL, SIGNAL_FACTS, sha256, validate_graph
-from .storage import (activity, add_review, connect, create_case, get_case, get_run, graph_info,
+from .model import APP_VERSION, FACT_FIELDS, HANDLER_FACTS, LEGAL, SIGNAL_FACTS, sha256, validate_graph, seed_graph
+from .storage import (activity, add_review, connect, create_case, get_case, get_run, graph_info, write_graph, uid,
                       graph_provenance, graph_revisions, init_db, list_graphs, load_graph, make_draft, now, publish_draft,
                       save_draft, save_facts, verify_run)
 
@@ -359,3 +359,21 @@ def activity_verify(request: Request):
 def procedural_map(request: Request):
     current(request)
     return procedural_catalog()
+
+
+class NewProcessRequest(BaseModel):
+    label: str = Field(min_length=3, max_length=120)
+
+
+@app.post("/api/processes", status_code=201)
+def create_process(body: NewProcessRequest, request: Request):
+    identity = require_role(request, "editor")
+    graph = seed_graph()
+    graph["label"] = body.label.strip()
+    with connect() as c:
+        slug = "org/" + identity.org_id + "/" + uid("process")
+        version_id = uid("g")
+        write_graph(c, version_id, slug, 1, graph, "draft", identity.username,
+                    "Neuer Prozess auf Basis des geprüften §20-Demo-Templates",
+                    org_id=identity.org_id)
+        return load_graph(c, version_id)
