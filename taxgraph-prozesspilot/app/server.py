@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 
 from .legal_review_api import router as legal_review_router
 from .auth import authenticate, current, local_principal, require_role, graph_access, case_access, run_access, capabilities
+from .procedural_map import catalog as procedural_catalog
 from .engine import execute
 from .audit import source_snapshot
 from .model import APP_VERSION, FACT_FIELDS, HANDLER_FACTS, LEGAL, SIGNAL_FACTS, sha256, validate_graph
@@ -203,6 +204,7 @@ def graph_element_history(version_id: str, request: Request):
 
 @app.post("/api/graphs/{version_id}/publish")
 def publish(version_id: str, args: PublishRequest, request: Request):
+    require_role(request,"reviewer")
     if not args.confirm_expert_review:
         raise ValueError("Bitte die strukturelle Prüfung bestätigen. Es erfolgt keine automatische Rechtsprüfung.")
     require_role(request,"reviewer")
@@ -347,3 +349,9 @@ def activity_verify(request: Request):
             prev = r["event_hash"]
         return {"valid": not broken, "events_checked": len(rows), "broken_events": broken, "last_hash": prev,
                 "note": "Integritätsprüfung gegen lokal gespeicherte Hashes, nicht gegen externen Trust-Anker."}
+
+
+@app.get("/api/procedural-map")
+def procedural_map(request: Request):
+    current(request)
+    return procedural_catalog()
