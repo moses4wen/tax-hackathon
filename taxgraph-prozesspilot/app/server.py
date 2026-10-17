@@ -57,6 +57,23 @@ async def security(request: Request, call_next):
     if production and identity is None and request.url.path != "/api/health":
         return JSONResponse({"detail":"Authentifizierung erforderlich."},status_code=401,
                             headers={"WWW-Authenticate": 'Basic realm="ProzessPilot"'})
+    # Preserve legacy local-demo password gate to prevent accidental exposure
+    # when upgrading an existing APP_PASSWORD deployment.
+    legacy_password = os.getenv("APP_PASSWORD", "")
+    if not production and legacy_password and request.url.path != "/api/health":
+        import base64
+        import binascii
+        header = request.headers.get("authorization", "")
+        allowed = False
+        if header.startswith("Basic "):
+            try:
+                user, pwd = base64.b64decode(header[6:], validate=True).decode("utf-8").split(":", 1)
+                allowed = secrets.compare_digest(user, os.getenv("APP_USER", "admin")) and secrets.compare_digest(pwd, legacy_password)
+            except (ValueError, UnicodeError, binascii.Error):
+                pass
+        if not allowed:
+            return JSONResponse({"detail":"Authentifizierung erforderlich."},status_code=401,
+                                headers={"WWW-Authenticate": 'Basic realm="ProzessPilot"'})
     request.state.principal = identity
     if production and request.url.path.startswith("/api") and request.url.path != "/api/health":
         mutating = request.method not in ("GET","HEAD","OPTIONS")
