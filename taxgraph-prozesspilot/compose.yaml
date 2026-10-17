@@ -1,0 +1,23 @@
+services:
+  prozesspilot:
+    build: .
+    restart: unless-stopped
+    environment:
+      APP_ENV: ${APP_ENV:-local}
+      APP_USER: ${APP_USER:-admin}
+      APP_PASSWORD: ${APP_PASSWORD:-}
+      MCP_API_KEY: ${MCP_API_KEY:-}
+      DATABASE_PATH: /data/prozesspilot.sqlite3
+      ALLOW_REAL_CASES: "0"
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${PORT:-8080}:8080"
+    volumes:
+      - prozesspilot_data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/api/health',timeout=2)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+volumes:
+  prozesspilot_data:

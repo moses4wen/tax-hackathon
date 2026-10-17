@@ -1,0 +1,44 @@
+# Local secrets and configuration. Keep example templates reviewable.
+.env
+.env.*
+!**/.env.example
+
+# Python environments, caches, and test output.
+**/.venv/
+**/venv/
+**/__pycache__/
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+**/*.py[cod]
+**/.coverage
+**/htmlcov/
+
+# Local application data and generated backups.
+**/data/
+**/backups/
+**/*.sqlite
+**/*.sqlite-*
+**/*.sqlite3
+**/*.sqlite3-*
+**/*.db
+**/*.db-*
+
+# User-provided reference material and local generated artifacts.
+*.pdf
+*.zip
+**/screenshots/
+**/outputs/
+**/tmp/
+**/temp/
+**/*.tmp
+**/*.temp
+**/*.log
+
+# OS and browser tooling artifacts.
+.DS_Store
+**/.DS_Store
+Thumbs.db
+**/playwright-report/
+**/test-results/
+**/.playwright-cli/

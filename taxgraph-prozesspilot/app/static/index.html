@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="de-DE" translate="no">
+<head>
+  <meta charset="utf-8" />
+  <meta name="google" content="notranslate" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="color-scheme" content="light" />
+  <meta name="description" content="ProzessPilot — auditierbarer Prozessgraph und steuerliche Entscheidungsunterstützung nach § 20 UmwStG." />
+  <title>ProzessPilot · § 20 UmwStG</title>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/assets/styles.css" />
+  <script src="/assets/audit-data.js" defer></script>
+  <script src="/assets/graph-view.js" defer></script>
+  <script src="/assets/app.js" defer></script>
+</head>
+<body>
+  <div class="application">
+    <header class="topbar">
+      <div class="brand-lockup">
+        <div class="brand-symbol" aria-hidden="true">§</div>
+        <div class="brand-name"><strong>prozess<span>pilot</span></strong><small>STEUERLICHE ENTSCHEIDUNGSPROZESSE</small></div>
+      </div>
+      <div class="topbar-right">
+        <div class="top-separator"></div>
+        <span class="env-tag"><span class="env-dot"></span> SYNTHETISCHE FALLDATEN</span>
+        <span id="healthBadge" class="health-badge">System wird geladen …</span>
+        <a class="api-link" href="/api/docs" target="_blank" rel="noopener noreferrer" title="OpenAPI-Dokumentation">API <span aria-hidden="true">↗</span></a>
+      </div>
+    </header>
+    <div class="layout">
+      <aside class="sidebar" aria-label="Fallnavigation">
+        <div class="sidebar-header">
+          <div><div class="section-eyebrow">ARBEITSBEREICH</div><h2>Fallakten <span id="caseCount">0</span></h2></div>
+          <button id="newCaseBtn" class="circle-button" aria-label="Neuen Fall anlegen" title="Neuen Fall anlegen">+</button>
+        </div>
+        <div id="caseList" class="case-list" aria-label="Fallliste"></div>
+        <div class="sidebar-bottom">
+          <div class="separation"></div>
+          <div class="sidebar-caption">PROTOTYP / FACHLICHE PRÜFUNG</div>
+          <p>Rechtliche Beurteilungen und Freigaben bleiben bei der verantwortlichen Fachperson.</p>
+          <div class="sidebar-footer">§ 20 UmwStG <span>·</span> Version <span id="appVersion">1.1.0</span></div>
+        </div>
+      </aside>
+      <main class="main">
+        <section class="page-heading">
+          <div class="eyebrow-line"><span class="square-accent"></span> § 20 UMWSTG <span class="eyebrow-divider">/</span> PROZESSINTELLIGENZ</div>
+          <div class="heading-actions">
+            <div class="heading-copy"><h1>Einbringungsprüfung<span class="title-dot">.</span></h1><p>Ein reproduzierbarer Entscheidungsweg von Sachverhalt und Nachweis bis zur prüfbaren Handlungsempfehlung.</p></div>
+            <div class="primary-actions"><button id="saveBtn" class="button button-secondary">Änderungen speichern</button><button id="runBtn" class="button button-primary"><span class="play-mark">▶</span> Prüfung ausführen</button></div>
+          </div>
+          <div class="context-bar">
+            <div class="context-item"><span class="context-key">AKTUELLER FALL</span><strong id="caseTitle">Wird geladen …</strong></div>
+            <div class="context-item"><span class="context-key">GRAPHVERSION</span><select id="graphVersionSelect" aria-label="Graphversion auswählen"></select></div>
+            <div class="context-item context-last"><span class="context-key">LETZTER PRÜFLAUF</span><span id="lastRunBadge" class="label-muted">Noch kein Prüflauf</span></div>
+          </div>
+          <div id="resultFreshness" class="intro-box" role="status" hidden></div>
+        </section>
+        <div class="tabbar" role="tablist" aria-label="Ansichten">
+          <button role="tab" class="tab active" id="tab-workspace" data-tab="workspace" aria-selected="true">Arbeitsbereich</button>
+          <button role="tab" class="tab" id="tab-audit" data-tab="audit" aria-selected="false">Prüfpfad &amp; Bericht</button>
+          <button role="tab" class="tab" id="tab-model" data-tab="model" aria-selected="false">Prozessmodell verwalten</button>
+        </div>
+        <div id="workspaceView" class="view view-active">
+          <div class="workspace-grid">
+            <section class="card facts-card">
+              <div class="card-top"><div><div class="mini-eyebrow">01 / EINGABE</div><h2>Sachverhalt</h2></div><span class="corner-symbol">≡</span></div>
+              <div class="intro-box">Entscheidungsrelevant sind nur <b>bestätigte</b> Angaben mit Beleg- oder Aktenvermerk. Ungeprüfte Angaben führen zu einer offenen Prüfung.</div>
+              <div id="factsForm" class="facts-form" aria-label="Sachverhaltsdaten"></div>
+              <div class="field-footnote">Nur synthetische Daten eingeben. Keine echten Mandantenunterlagen hochladen.</div>
+            </section>
+            <section class="card graph-card">
+              <div class="card-top graph-top"><div><div class="mini-eyebrow">02 / AUSFÜHRUNG</div><h2>Prozessgraph</h2></div><div class="graph-meta"><span id="graphCounts">— Knoten · — Kanten</span></div></div>
+              <div class="graph-tools" aria-label="Graphnavigation">
+                <button id="fitGraphBtn" class="tool-toggle">Gesamtansicht</button>
+                <button id="zoomOutBtn" class="tool-toggle" aria-label="Verkleinern">−</button>
+                <output id="zoomLevel" aria-live="polite">100 %</output>
+                <button id="zoomInBtn" class="tool-toggle" aria-label="Vergrößern">+</button>
+                <button id="resetGraphBtn" class="tool-toggle">Ansicht zurücksetzen</button>
+                <button id="focusSelectionBtn" class="tool-toggle">Auswahl zentrieren</button>
+                <button id="lastNodeBtn" class="tool-toggle">Prüfende anzeigen</button>
+                <button id="pathToggle" class="tool-toggle" aria-pressed="false">Alle Verbindungen</button>
+              </div>
+              <div class="edge-picker"><label for="edgeSelect">Kante prüfen</label><select id="edgeSelect"><option value="">Kante im Graph oder hier auswählen</option></select></div>
+              <div class="graph-legend"><span class="legend-selected">Ausgeführt</span><span class="legend-rejected">Nicht gewählt</span><span class="legend-pending">Klärung / Freigabe offen</span><span class="legend-unevaluated">Nicht ausgewertet</span><span class="legend-inspected">Auswahl</span></div>
+              <div class="graph-viewport" id="graphViewport" tabindex="0" aria-label="Interaktiver Prozessgraph mit Knoten und Kanten">
+                <div id="graphCanvas"><div class="graph-stage" id="graphStage"><svg class="edge-layer" id="edgeLayer" viewBox="0 0 1100 1860" aria-label="Anklickbare Prozesskanten"></svg><div id="nodeLayer"></div></div></div>
+              </div>
+              <div class="graph-foot">Knoten oder Kante anklicken · Freie Fläche ziehen zum Verschieben · Pfeiltasten zur Navigation · +/− zum Zoomen · F für Gesamtansicht.</div>
+            </section>
+            <section class="card findings-card">
+              <div class="inspector-head"><span id="inspectorHeading" class="mini-eyebrow">KNOTENPRÜFUNG</span><span id="inspectorType" class="type-tag">—</span></div>
+              <div id="inspectorPanel" class="inspector-panel"><p class="help-text">Wählen Sie einen Knoten oder eine Kante aus.</p></div>
+              <div class="divider"></div>
+              <div class="card-top"><div><div class="mini-eyebrow">03 / ERGEBNIS</div><h2>Prüfergebnis</h2></div><span id="resultStatus" class="status-pill status-idle">Noch offen</span></div>
+              <div id="recommendationPanel" class="recommendation-panel"><div class="empty-result"><div class="empty-result-icon">↗</div><strong>Noch kein Prüfergebnis</strong><p>Fallangaben prüfen und die Ausführung starten. Das Ergebnis basiert auf einem versionierten Prozessgraphen.</p></div></div>
+            </section>
+          </div>
+        </div>
+        <div id="auditView" class="view" hidden>
+          <div class="audit-layout">
+            <section class="card audit-summary"><div class="card-top"><div><div class="mini-eyebrow">AUDIT / INTEGRITÄT</div><h2>Nachvollziehbarer Prüfpfad</h2></div><button id="exportAuditBtn" class="button button-secondary button-small">JSON exportieren ↓</button></div><div class="run-selector"><label for="auditRunSelect">Historischen Prüflauf anzeigen</label><select id="auditRunSelect"></select></div><div id="auditHeader"></div></section>
+            <section class="card report-card"><div class="card-top"><div><div class="mini-eyebrow">DEUTSCHE AUSGABE</div><h2>Handlungsempfehlung</h2></div><button id="printBtn" class="button button-secondary button-small">Bericht drucken ↗</button></div><div id="reportBody"></div></section>
+          </div>
+          <section class="card event-card"><div class="card-top"><div><div class="mini-eyebrow">AUSFÜHRUNGSEREIGNISSE</div><h2>Ereignisprotokoll</h2></div><div class="searchwrap"><input id="eventFilter" placeholder="Ereignisse filtern …" aria-label="Audit-Ereignisse filtern"/></div></div><div class="event-scroll" id="eventList"></div></section>
+        </div>
+        <div id="modelView" class="view" hidden>
+          <div class="model-grid">
+            <section class="card"><div class="card-top"><div><div class="mini-eyebrow">VERSIONIERUNG</div><h2>Graphversionen</h2></div><button id="draftBtn" class="button button-secondary button-small">+ Entwurf erstellen</button></div><div class="intro-box">Veröffentlichte Versionen sind unveränderlich. Änderungen erfolgen in einem neuen Entwurf. Ausgeführte Fälle bleiben ihrer ursprünglichen Version zugeordnet.</div><div id="versionsList" class="version-list"></div><div class="model-warning"><strong>Wichtig:</strong> Die strukturelle Validierung ersetzt keine Prüfung durch eine Steuerberatungsperson.</div></section>
+            <section class="card editor-card"><div class="card-top"><div><div class="mini-eyebrow">TYPISIERTER PROZESSGRAPH</div><h2>Knoten &amp; Kanten</h2></div><span id="editorStatus" class="type-tag">Lesemodus</span></div><p class="help-text">JSON enthält alle Prozessknoten, Kanten, Bedingungen, Guidance, Fallstricke und Rechtsquellen-IDs. Die Ausführungsengine erlaubt nur definierte Guard-Signale.</p><textarea id="graphEditor" spellcheck="false" aria-label="Graph JSON Editor"></textarea><div class="editor-buttons"><button id="validateGraphBtn" class="button button-secondary">Struktur prüfen</button><button id="saveGraphBtn" class="button button-secondary">Entwurf speichern</button><button id="publishGraphBtn" class="button button-primary">Veröffentlichen</button></div><div id="graphValidation" class="validation-box"></div><div class="revision-head"><span class="mini-eyebrow">ÄNDERUNGSHISTORIE</span><button id="exportGraphBtn" class="button button-secondary button-small">Graph-JSON exportieren ↓</button></div><div id="revisionHistory" class="revision-history"></div></section>
+          </div>
+        </div>
+        <footer class="bottom-disclaimer">ProzessPilot ist ein technischer Demonstrator für synthetische Sachverhalte. Keine Steuerberatung. Keine Verbindung zu einer produktiven TaxGraph-Instanz.</footer>
+      </main>
+    </div>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <dialog id="newCaseDialog" class="dialog"><form id="newCaseForm"><div class="dialog-eyebrow">NEUE FALLAKTE</div><h2>Fall anlegen</h2><p>Neue Fälle werden mit leeren, nicht bestätigten Angaben angelegt.</p><label for="newCaseTitle">Fallbezeichnung</label><input id="newCaseTitle" required maxlength="180" placeholder="z. B. Einbringung Beispiel GmbH"/><label for="newCaseDescription">Kurzer Sachverhalt</label><textarea id="newCaseDescription" rows="4" placeholder="Fiktive Transaktion beschreiben …"></textarea><div class="dialog-actions"><button type="button" class="button button-secondary" id="cancelNewCase">Abbrechen</button><button class="button button-primary" type="submit">Fall anlegen</button></div></form></dialog>
+  <div id="printReport" class="print-report"></div>
+</body>
+</html>

@@ -1,0 +1,15 @@
+.git
+.venv
+.env
+.env.*
+__pycache__
+.pytest_cache
+*.pyc
+*.sqlite*
+data
+screenshots
+outputs
+tmp
+temp
+*.pdf
+*.zip
