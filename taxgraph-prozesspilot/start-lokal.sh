@@ -24,5 +24,5 @@ if [ -f .env ]; then
 fi
 HOST="${BIND_ADDRESS:-127.0.0.1}"
 PORT="${PORT:-8080}"
-echo "ProzessPilot startet: http://$HOST:$PORT (Ctrl+C zum Beenden)"
+echo "processGraph startet: http://$HOST:$PORT (Ctrl+C zum Beenden)"
 exec .venv/bin/python -m uvicorn app.server:app --host "$HOST" --port "$PORT"

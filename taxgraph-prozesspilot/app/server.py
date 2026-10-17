@@ -39,7 +39,7 @@ async def lifespan(_app: FastAPI):
     yield
 
 
-app = FastAPI(title="ProzessPilot §20 UmwStG", description="Auditierbarer deutscher Steuer-Prozessgraph (synthetisches MVP)",
+app = FastAPI(title="processGraph §20 UmwStG", description="Auditierbarer deutscher Steuer-Prozessgraph (synthetisches MVP)",
               version=APP_VERSION, lifespan=lifespan, docs_url="/api/docs", openapi_url="/api/openapi.json", redoc_url=None)
 app.mount("/assets", StaticFiles(directory=str(STATIC)), name="assets")
 # Fachpruefung-V2 additive integration
@@ -67,7 +67,7 @@ async def security(request: Request, call_next):
     )
     if production and identity is None and request.url.path != "/api/health":
         return JSONResponse({"detail":"Authentifizierung erforderlich."},status_code=401,
-                            headers={"WWW-Authenticate": 'Basic realm="ProzessPilot"'})
+                            headers={"WWW-Authenticate": 'Basic realm="processGraph"'})
     # Preserve legacy local-demo password gate to prevent accidental exposure
     # when upgrading an existing APP_PASSWORD deployment.
     legacy_password = os.getenv("APP_PASSWORD", "")
@@ -84,7 +84,7 @@ async def security(request: Request, call_next):
                 pass
         if not allowed:
             return JSONResponse({"detail":"Authentifizierung erforderlich."},status_code=401,
-                                headers={"WWW-Authenticate": 'Basic realm="ProzessPilot"'})
+                                headers={"WWW-Authenticate": 'Basic realm="processGraph"'})
     request.state.principal = identity
     if production and request.url.path.startswith("/api") and request.url.path != "/api/health":
         mutating = request.method not in ("GET","HEAD","OPTIONS")
@@ -172,14 +172,14 @@ def legacy_studio():
 def health():
     with connect() as c:
         count = c.execute("SELECT count(*) FROM graph_versions WHERE status='published'").fetchone()[0]
-    return {"status": "ok", "service": "ProzessPilot", "published_graphs": count, "time": now()}
+    return {"status": "ok", "service": "processGraph", "published_graphs": count, "time": now()}
 
 
 @app.get("/api/config")
 def config(request: Request):
     identity = current(request)
     role_switch = demo_role_switch_enabled()
-    return {"name": "ProzessPilot", "locale": "de-DE", "version": APP_VERSION, "synthetic_only": os.environ.get("ALLOW_REAL_CASES") != "1",
+    return {"name": "processGraph", "locale": "de-DE", "version": APP_VERSION, "synthetic_only": os.environ.get("ALLOW_REAL_CASES") != "1",
             "auth_enabled": os.getenv("APP_ENV") == "production", "identity": vars(identity), "capabilities": capabilities(identity),
             "demo_role_switch": role_switch,
             "demo_roles": [{"value": role, "label": ROLE_LABELS[role]} for role in ROLES] if role_switch else [],

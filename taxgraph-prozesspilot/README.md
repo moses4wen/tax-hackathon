@@ -1,4 +1,4 @@
-# ProzessPilot — § 20 UmwStG
+# processGraph — § 20 UmwStG
 
 **Lauffähiger Hackathon-Prototyp:** deutschsprachige Web-Anwendung mit persistiertem, typisiertem Prozessgraphen, deterministischer Ausführung, fallbezogenen Nachweisreferenzen, Versionierung und prüfbarem Ereignisprotokoll.
 
@@ -9,7 +9,7 @@
 Voraussetzung: **Python 3.11 oder neuer** und Internetzugang für das einmalige Installieren der in `requirements.txt` festgelegten Python-Abhängigkeiten.
 
 ```bash
-unzip prozesspilot-hackathon.zip
+unzip processgraph-hackathon.zip
 cd taxgraph-prozesspilot
 ./start-lokal.sh
 ```
@@ -45,7 +45,7 @@ Danach **http://127.0.0.1:8080** öffnen. `docker compose logs -f prozesspilot` 
 Das Standard-Compose veröffentlicht den Dienst absichtlich **nur auf 127.0.0.1**. Für einen eigenen VPS: Reverse Proxy (z. B. Caddy/Nginx) auf dieselbe Maschine setzen, HTTPS erzwingen und `APP_ENV=production` / ein starkes Passwort verwenden. Beispiel Caddy-Konfiguration nach DNS- und TLS-Setup:
 
 ```caddyfile
-prozesspilot.example.com {
+processgraph.example.com {
     reverse_proxy 127.0.0.1:8080
 }
 ```
