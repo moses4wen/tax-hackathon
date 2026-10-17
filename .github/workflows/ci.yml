@@ -15,6 +15,14 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Capture exact source snapshot
+        run: |
+          mkdir -p verification
+          git archive --format=zip HEAD -o verification/source.zip
+          git rev-parse HEAD > verification/commit.txt
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -32,15 +40,22 @@ jobs:
 
       - name: Run Python tests
         working-directory: taxgraph-prozesspilot
-        run: python -m pytest -q
+        run: python -m pytest -q --junitxml=../verification/tests.xml
 
       - name: Check browser JavaScript syntax
         working-directory: taxgraph-prozesspilot
         run: |
-          node --check app/static/app.js
-          node --check app/static/audit-data.js
-          node --check app/static/graph-view.js
+          for file in app/static/*.js; do node --check "$file"; done
 
       - name: Check local startup script syntax
         working-directory: taxgraph-prozesspilot
         run: sh -n start-lokal.sh
+
+      - name: Retain reproducibility evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: verification-${{ github.sha }}
+          path: verification/
+          retention-days: 7
+          if-no-files-found: error
