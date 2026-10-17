@@ -52,6 +52,8 @@ prozesspilot.example.com {
 
 Wenn die Hosting-Plattform bereits HTTPS bereitstellt und einen offenen Container-Port benötigt, `BIND_ADDRESS=0.0.0.0` setzen und die Plattform-Zugriffskontrollen verwenden. Ohne HTTPS **kein öffentliches Hosting**; HTTP Basic Auth allein schützt keine Zugangsdaten während der Übertragung. Eine gemeinsame Demo-Anmeldung ist keine mandantenfähige Benutzerverwaltung.
 
+**Öffentlicher Demo-Modus ohne Login:** Mit `APP_ENV=local`, leerem `APP_PASSWORD` und `APP_DEMO_ROLE_SWITCH=1` zeigt die Oberfläche einen Rollenwähler für Leser, Bearbeiter und Fachprüfer. `APP_LOCAL_ROLE=editor` setzt die Startrolle. Alle Besucher teilen sich denselben synthetischen Demo-Arbeitsbereich; Änderungen sind für alle sichtbar. Nur mit vollständig erfundenen Fällen verwenden. Im Produktivmodus ist die Rollenauswahl deaktiviert.
+
 **Persistenz:** Bei Plattform-Hosting ein dauerhaftes Volume nach `/data` mounten. Ohne dauerhaftes Volume gehen SQLite-Daten bei einer neuen Bereitstellung verloren.
 
 ## 3. Bedienung der Web-App
