@@ -11,7 +11,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
+from .auth import case_access, run_access, current, require_role
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field
 
@@ -71,10 +72,12 @@ def get_schema():
 
 
 @router.post("/api/cases/{case_id}/fachpruefung")
-def run_legal_review(case_id: str, body: ReviewRequest):
+def run_legal_review(case_id: str, body: ReviewRequest, request: Request):
     if len(body.extra_facts) > len(FIELDS) or not set(body.extra_facts) <= FIELDS:
         raise HTTPException(status_code=422, detail="Unbekanntes oder zu umfangreiches Zusatzfeld.")
+    require_role(request,"editor","reviewer")
     with connect() as c:
+        case_access(request,c,case_id)
         case = get_case(c, case_id)
         if not case["synthetic"]:
             raise HTTPException(status_code=403, detail="Reale Fälle sind für die Fachprüfung V2 gesperrt.")
@@ -99,8 +102,9 @@ def run_legal_review(case_id: str, body: ReviewRequest):
 
 
 @router.get("/api/cases/{case_id}/fachpruefung/latest")
-def last_legal_review(case_id: str):
+def last_legal_review(case_id: str, request: Request):
     with connect() as c:
+        case_access(request,c,case_id)
         get_case(c, case_id)
         _ensure_table(c)
         row = c.execute("""SELECT id FROM legal_assessment_runs WHERE case_id=?
@@ -111,14 +115,16 @@ def last_legal_review(case_id: str):
 
 
 @router.get("/api/cases/{case_id}/fachpruefung/{run_id}")
-def get_legal_review(case_id: str, run_id: str):
+def get_legal_review(case_id: str, run_id: str, request: Request):
     with connect() as c:
+        case_access(request,c,case_id)
         return _get_document(c, case_id, run_id)
 
 
 @router.get("/api/cases/{case_id}/fachpruefung/{run_id}/export")
-def export_legal_review(case_id: str, run_id: str):
+def export_legal_review(case_id: str, run_id: str, request: Request):
     with connect() as c:
+        case_access(request,c,case_id)
         obj = _get_document(c, case_id, run_id)
         return Response(json.dumps(obj, ensure_ascii=False, indent=2), media_type="application/json; charset=utf-8",
                         headers={"Content-Disposition": f'attachment; filename="fachpruefung-{run_id}.json"',
