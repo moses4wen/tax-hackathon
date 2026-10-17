@@ -327,6 +327,8 @@ def run_audit(run_id: str, request: Request):
 @app.get("/api/audit/activity")
 def activities(request: Request):
     require_role(request,"reviewer")
+    if os.getenv("APP_ENV") == "production":
+        raise HTTPException(403, "Globales Aktivitätsprotokoll ist nicht organisationsisoliert.")
     with connect() as c:
         rows = c.execute("SELECT * FROM activity_events ORDER BY id DESC LIMIT 150").fetchall()
         return {"activity": [{**dict(r), "detail": json.loads(r["detail_json"])} for r in rows]}
@@ -335,6 +337,8 @@ def activities(request: Request):
 @app.get("/api/audit/activity/verify")
 def activity_verify(request: Request):
     require_role(request,"reviewer")
+    if os.getenv("APP_ENV") == "production":
+        raise HTTPException(403, "Globales Aktivitätsprotokoll ist nicht organisationsisoliert.")
     from .model import sha256
     with connect() as c:
         prev = "0" * 64
