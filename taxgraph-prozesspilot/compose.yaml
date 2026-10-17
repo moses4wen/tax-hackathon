@@ -7,6 +7,8 @@ services:
       APP_USER: ${APP_USER:-admin}
       APP_PASSWORD: ${APP_PASSWORD:-}
       MCP_API_KEY: ${MCP_API_KEY:-}
+      APP_LOCAL_ROLE: ${APP_LOCAL_ROLE:-reviewer}
+      APP_DEMO_ROLE_SWITCH: ${APP_DEMO_ROLE_SWITCH:-0}
       DATABASE_PATH: /data/prozesspilot.sqlite3
       ALLOW_REAL_CASES: "0"
     ports:
