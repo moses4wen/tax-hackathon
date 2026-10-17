@@ -15,6 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from .legal_review_api import router as legal_review_router
+from .auth import authenticate, current, local_principal, require_role, graph_access, case_access, run_access, capabilities
 from .engine import execute
 from .audit import source_snapshot
 from .model import APP_VERSION, FACT_FIELDS, HANDLER_FACTS, LEGAL, SIGNAL_FACTS, sha256, validate_graph
@@ -27,9 +28,11 @@ STATIC = Path(__file__).resolve().parent / "static"
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    if os.getenv("APP_ENV", "local") == "production" and len(os.getenv("APP_PASSWORD", "")) < 16:
-        raise RuntimeError("APP_ENV=production erfordert APP_PASSWORD mit mindestens 16 Zeichen.")
     init_db()
+    if os.getenv("APP_ENV") == "production":
+        with connect() as c:
+            if not c.execute("SELECT 1 FROM app_users WHERE active=1 LIMIT 1").fetchone():
+                raise RuntimeError("Produktivmodus erfordert Benutzerkonten.")
     yield
 
 
@@ -48,22 +51,18 @@ async def security(request: Request, call_next):
                 return JSONResponse({"detail": "Anfrage zu groß (max. 2 MB)."}, status_code=413)
         except ValueError:
             return JSONResponse({"detail": "Ungültige Anfrage."}, status_code=400)
-    password = os.environ.get("APP_PASSWORD", "")
-    if password and request.url.path != "/api/health":
-        # HTTP Basic is for private hackathon demos behind HTTPS, not identity assurance.
-        import base64
-        import binascii
-        header = request.headers.get("authorization", "")
-        authorized = False
-        if header.startswith("Basic "):
-            try:
-                user, pwd = base64.b64decode(header[6:], validate=True).decode("utf-8").split(":", 1)
-                authorized = secrets.compare_digest(user, os.environ.get("APP_USER", "admin")) and secrets.compare_digest(pwd, password)
-            except (ValueError, UnicodeDecodeError, binascii.Error):
-                pass
-        if not authorized:
-            return JSONResponse({"detail": "Authentifizierung erforderlich."}, status_code=401,
-                                headers={"WWW-Authenticate": 'Basic realm="ProzessPilot"'})
+    production = os.getenv("APP_ENV", "local") == "production"
+    identity = authenticate(request.headers.get("authorization", "")) if production else local_principal()
+    if production and identity is None and request.url.path != "/api/health":
+        return JSONResponse({"detail":"Authentifizierung erforderlich."},status_code=401,
+                            headers={"WWW-Authenticate": 'Basic realm="ProzessPilot"'})
+    request.state.principal = identity
+    if production and request.url.path.startswith("/api") and request.url.path != "/api/health":
+        mutating = request.method not in ("GET","HEAD","OPTIONS")
+        if (mutating and identity.role == "viewer") or (
+            mutating and identity.role != "reviewer" and
+            (request.url.path.endswith("/publish") or request.url.path.endswith("/review"))):
+            return JSONResponse({"detail":"Für diese Aktion fehlt die Berechtigung."},status_code=403)
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
@@ -139,26 +138,30 @@ def health():
 
 
 @app.get("/api/config")
-def config():
+def config(request: Request):
     return {"name": "ProzessPilot", "locale": "de-DE", "version": APP_VERSION, "synthetic_only": os.environ.get("ALLOW_REAL_CASES") != "1",
-            "auth_enabled": bool(os.environ.get("APP_PASSWORD")), "legal_sources": LEGAL,
+            "auth_enabled": os.getenv("APP_ENV") == "production", "identity": vars(current(request)), "capabilities": capabilities(current(request)), "legal_sources": LEGAL,
             "fact_fields": FACT_FIELDS, "signal_facts": SIGNAL_FACTS, "handler_facts": HANDLER_FACTS,
             "warning": "Demonstrator: keine Steuerberatung und keine geprüfte TaxGraph-API-Anbindung."}
 
 
 @app.get("/api/graphs")
-def graphs():
-    with connect() as c: return {"graphs": list_graphs(c)}
+def graphs(request: Request):
+    p=current(request)
+    with connect() as c: return {"graphs": list_graphs(c,p.org_id,published_only=p.role=="viewer")}
 
 
 @app.get("/api/graphs/{version_id}")
-def get_graph(version_id: str):
-    with connect() as c: return load_graph(c, version_id)
+def get_graph(version_id: str, request: Request):
+    with connect() as c:
+        graph_access(request,c,version_id)
+        return load_graph(c, version_id)
 
 
 @app.get("/api/graphs/{version_id}/export")
-def export_graph(version_id: str):
+def export_graph(version_id: str, request: Request):
     with connect() as c:
+        graph_access(request,c,version_id)
         obj=load_graph(c, version_id)
         doc={"format": "ProzessPilot-Graph-1", "exported_at": now(),
              "meta": obj["meta"], "graph": {k: obj[k] for k in ("label", "nodes", "edges")},
@@ -169,30 +172,43 @@ def export_graph(version_id: str):
 
 
 @app.post("/api/graphs/{version_id}/draft")
-def draft(version_id: str, args: ActorRequest):
-    with connect() as c: return make_draft(c, version_id, args.actor)
+def draft(version_id: str, args: ActorRequest, request: Request):
+    require_role(request,"editor","reviewer")
+    with connect() as c:
+        graph_access(request,c,version_id)
+        return make_draft(c, version_id, current(request).username)
 
 
 @app.put("/api/graphs/{version_id}")
-def edit_graph(version_id: str, args: DraftSaveRequest):
-    with connect() as c: return save_draft(c, version_id, args.graph, args.actor, args.reason)
+def edit_graph(version_id: str, args: DraftSaveRequest, request: Request):
+    require_role(request,"editor","reviewer")
+    with connect() as c:
+        graph_access(request,c,version_id)
+        return save_draft(c, version_id, args.graph, current(request).username, args.reason)
 
 
 @app.get("/api/graphs/{version_id}/revisions")
-def graph_history(version_id: str):
-    with connect() as c: return {"revisions": graph_revisions(c, version_id)}
+def graph_history(version_id: str, request: Request):
+    with connect() as c:
+        graph_access(request,c,version_id)
+        return {"revisions": graph_revisions(c, version_id)}
 
 
 @app.get("/api/graphs/{version_id}/provenance")
-def graph_element_history(version_id: str):
-    with connect() as c: return graph_provenance(c, version_id)
+def graph_element_history(version_id: str, request: Request):
+    with connect() as c:
+        graph_access(request,c,version_id)
+        return graph_provenance(c, version_id)
 
 
 @app.post("/api/graphs/{version_id}/publish")
-def publish(version_id: str, args: PublishRequest):
+def publish(version_id: str, args: PublishRequest, request: Request):
     if not args.confirm_expert_review:
         raise ValueError("Bitte die strukturelle Prüfung bestätigen. Es erfolgt keine automatische Rechtsprüfung.")
-    with connect() as c: return publish_draft(c, version_id, args.actor)
+    require_role(request,"reviewer")
+    with connect() as c:
+        graph_access(request,c,version_id)
+        return publish_draft(c, version_id, current(request).username)
 
 
 @app.post("/api/graphs/validate")
@@ -204,9 +220,9 @@ def graph_validate(graph: dict):
 
 
 @app.get("/api/cases")
-def cases():
+def cases(request: Request):
     with connect() as c:
-        rows = c.execute("SELECT * FROM cases ORDER BY created_at DESC, id ASC").fetchall()
+        rows = c.execute("SELECT * FROM cases WHERE org_id=? ORDER BY created_at DESC, id ASC", (current(request).org_id,)).fetchall()
         result = []
         for r in rows:
             v = dict(r)
@@ -218,33 +234,43 @@ def cases():
 
 
 @app.post("/api/cases", status_code=201)
-def new_case(args: NewCase):
+def new_case(args: NewCase, request: Request):
     with connect() as c:
-        cid = create_case(c, args.title, args.description, facts=args.facts, synthetic=True)
+        require_role(request,"editor")
+        cid = create_case(c, args.title, args.description, facts=args.facts, synthetic=True, actor=current(request).username, org_id=current(request).org_id)
         return get_case(c, cid)
 
 
 @app.get("/api/cases/{case_id}")
-def case_get(case_id: str):
-    with connect() as c: return get_case(c, case_id)
+def case_get(case_id: str, request: Request):
+    with connect() as c:
+        case_access(request,c,case_id)
+        return get_case(c, case_id)
 
 
 @app.put("/api/cases/{case_id}/facts")
-def case_update(case_id: str, args: FactsUpdate):
-    with connect() as c: return save_facts(c, case_id, args.facts, args.actor)
+def case_update(case_id: str, args: FactsUpdate, request: Request):
+    require_role(request,"editor","reviewer")
+    with connect() as c:
+        case_access(request,c,case_id)
+        return save_facts(c, case_id, args.facts, current(request).username)
 
 
 @app.get("/api/cases/{case_id}/runs")
-def case_runs(case_id: str):
+def case_runs(case_id: str, request: Request):
     with connect() as c:
+        case_access(request,c,case_id)
         get_case(c, case_id)
         runs = [dict(r) for r in c.execute("SELECT id,status,graph_version,started_at,finished_at FROM runs WHERE case_id=? ORDER BY started_at DESC,rowid DESC", (case_id,))]
     return {"runs": runs}
 
 
 @app.post("/api/cases/{case_id}/run")
-def run_case(case_id: str, args: RunRequest):
+def run_case(case_id: str, args: RunRequest, request: Request):
     with connect() as c:
+        require_role(request,"editor","reviewer")
+        case_access(request,c,case_id)
+        graph_access(request,c,args.graph_version)
         result = execute(c, case_id, args.graph_version)
         activity(c, "case", case_id, "RUN_EXECUTED", "Graph-Executor",
                  {"run_id": result["run_id"], "graph_version": args.graph_version, "status": result["result"]["status"]})
@@ -252,8 +278,11 @@ def run_case(case_id: str, args: RunRequest):
 
 
 @app.post("/api/cases/{case_id}/review")
-def review_case(case_id: str, args: ReviewRequest):
+def review_case(case_id: str, args: ReviewRequest, request: Request):
     with connect() as c:
+        require_role(request,"reviewer")
+        case_access(request,c,case_id)
+        run_access(request,c,args.run_id)
         run = get_run(c, args.run_id, include_events=False)
         if run["case_id"] != case_id:
             raise ValueError("Prüflauf gehört nicht zu diesem Fall.")
@@ -264,21 +293,23 @@ def review_case(case_id: str, args: ReviewRequest):
         current_facts = {x["key"]: x for x in get_case(c, case_id)["facts"]}
         if sha256(current_facts) != run["facts_hash"]:
             raise ValueError("Fakten wurden nach dem Prüflauf verändert. Erneut ausführen.")
-        rev = add_review(c, case_id, run["graph_version"], args.reviewer, args.decision, args.note, run["facts_hash"])
+        rev = add_review(c, case_id, run["graph_version"], current(request).username, args.decision, args.note, run["facts_hash"])
         return {"review": rev, "message": "Freigabeentscheidung dokumentiert. Neuen Prüflauf starten, um sie im Graph abzubilden."}
 
 
 @app.get("/api/runs/{run_id}")
-def run_get(run_id: str):
+def run_get(run_id: str, request: Request):
     with connect() as c:
+        run_access(request,c,run_id)
         run = get_run(c, run_id)
         run["verification"] = verify_run(c, run_id)
         return run
 
 
 @app.get("/api/runs/{run_id}/audit")
-def run_audit(run_id: str):
+def run_audit(run_id: str, request: Request):
     with connect() as c:
+        run_access(request,c,run_id)
         run = get_run(c, run_id)
         obj = load_graph(c, run["graph_version"], check=False)
         audit = {"format": "ProzessPilot-Audit-1", "exported_at": now(),
@@ -292,14 +323,16 @@ def run_audit(run_id: str):
 
 
 @app.get("/api/audit/activity")
-def activities():
+def activities(request: Request):
+    require_role(request,"reviewer")
     with connect() as c:
         rows = c.execute("SELECT * FROM activity_events ORDER BY id DESC LIMIT 150").fetchall()
         return {"activity": [{**dict(r), "detail": json.loads(r["detail_json"])} for r in rows]}
 
 
 @app.get("/api/audit/activity/verify")
-def activity_verify():
+def activity_verify(request: Request):
+    require_role(request,"reviewer")
     from .model import sha256
     with connect() as c:
         prev = "0" * 64
