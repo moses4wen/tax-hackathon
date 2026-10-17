@@ -2,7 +2,7 @@
 
 **Implementation date:** 2026-10-17. **Legal sources:** [§ 1 UmwStG](https://www.gesetze-im-internet.de/umwstg_2006/__1.html), [§ 20 UmwStG](https://www.gesetze-im-internet.de/umwstg_2006/__20.html), [§ 22 UmwStG](https://www.gesetze-im-internet.de/umwstg_2006/__22.html), [§ 23 UmwStG](https://www.gesetze-im-internet.de/umwstg_2006/__23.html), [§ 152 UmwG](https://www.gesetze-im-internet.de/umwg_1995/__152.html), [BMF UmwStE 02.01.2025](https://www.bundesfinanzministerium.de/Content/DE/Downloads/BMF_Schreiben/Steuerarten/Koerperschaftsteuer_Umwandlungssteuer/2025-01-02-umwStE.pdf?__blob=publicationFile).
 
-The extension **retains the existing ProzessPilot 19-node / 35-edge executor**, its audit endpoints, and its published graph versions. It **adds** a deterministic, explicit Legal Reasoning Graph for the typical synthetic *eingetragener Einzelkaufmann → GmbH* transaction. The original process graph is **not renamed or silently represented as fully legally complete**.
+The extension **retains the existing processGraph 19-node / 35-edge executor**, its audit endpoints, and its published graph versions. It **adds** a deterministic, explicit Legal Reasoning Graph for the typical synthetic *eingetragener Einzelkaufmann → GmbH* transaction. The original process graph is **not renamed or silently represented as fully legally complete**.
 
 ## Running the supplement
 

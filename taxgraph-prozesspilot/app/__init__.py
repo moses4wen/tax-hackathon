@@ -1,1 +1,1 @@
-"""ProzessPilot: auditierbarer Prozessgraph fuer § 20 UmwStG."""
+"""processGraph: auditierbarer Prozessgraph fuer § 20 UmwStG."""

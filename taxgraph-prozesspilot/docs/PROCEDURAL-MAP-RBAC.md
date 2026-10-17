@@ -4,7 +4,7 @@
 
 **Code change is a review branch, not a deployed system.** The URL `https://34-38-10-198.sslip.io/#graphs` was inspected as a rendered page, not as an authenticated machine-readable API. `/api/procedural-map` returns a **curated v3 node mapping**. This is *not* a complete remote graph import or a claim that all remote edges are known. No MCP tools are invoked; no API key is exposed.
 
-`app/procedural_map.py` maps the 17 observed external nodes into the original `ProzessPilot` audit process and the existing Fachprüfung V2's substantive legal-test graph. It identifies the separate `SHARE_TAX_RIGHT` (§1(4)) and `TAXRIGHT` (§20(2)), timing, net-negative-asset upvaluation and tax-consequence branches. Note: `c_aufstockung` is **not** independently computed yet; its mapping is marked review-required. The V2 engine does not currently accept net-negative assets as a positive path. Do not change a published legal graph or silently permit an unsupported Wertansatz.
+`app/procedural_map.py` maps the 17 observed external nodes into the original `processGraph` audit process and the existing Fachprüfung V2's substantive legal-test graph. It identifies the separate `SHARE_TAX_RIGHT` (§1(4)) and `TAXRIGHT` (§20(2)), timing, net-negative-asset upvaluation and tax-consequence branches. Note: `c_aufstockung` is **not** independently computed yet; its mapping is marked review-required. The V2 engine does not currently accept net-negative assets as a positive path. Do not change a published legal graph or silently permit an unsupported Wertansatz.
 
 ## Roles and scope
 
