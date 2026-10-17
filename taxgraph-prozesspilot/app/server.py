@@ -15,7 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from .legal_review_api import router as legal_review_router
-from .auth import authenticate, current, local_principal, require_role, graph_access, case_access, run_access, capabilities
+from .auth import ROLE_LABELS, ROLES, authenticate, current, local_principal, require_role, graph_access, case_access, run_access, capabilities
 from .procedural_map import catalog as procedural_catalog
 from .engine import execute
 from .audit import source_snapshot
@@ -44,6 +44,10 @@ app.mount("/assets", StaticFiles(directory=str(STATIC)), name="assets")
 app.include_router(legal_review_router)
 
 
+def demo_role_switch_enabled() -> bool:
+    return os.getenv("APP_ENV", "local") != "production" and os.getenv("APP_DEMO_ROLE_SWITCH") == "1"
+
+
 @app.middleware("http")
 async def security(request: Request, call_next):
     if request.headers.get("content-length"):
@@ -53,7 +57,10 @@ async def security(request: Request, call_next):
         except ValueError:
             return JSONResponse({"detail": "Ungültige Anfrage."}, status_code=400)
     production = os.getenv("APP_ENV", "local") == "production"
-    identity = authenticate(request.headers.get("authorization", "")) if production else local_principal()
+    demo_role_switch = demo_role_switch_enabled()
+    identity = authenticate(request.headers.get("authorization", "")) if production else local_principal(
+        request.cookies.get("demo_role") if demo_role_switch else None
+    )
     if production and identity is None and request.url.path != "/api/health":
         return JSONResponse({"detail":"Authentifizierung erforderlich."},status_code=401,
                             headers={"WWW-Authenticate": 'Basic realm="ProzessPilot"'})
@@ -157,9 +164,14 @@ def health():
 
 @app.get("/api/config")
 def config(request: Request):
+    identity = current(request)
+    role_switch = demo_role_switch_enabled()
     return {"name": "ProzessPilot", "locale": "de-DE", "version": APP_VERSION, "synthetic_only": os.environ.get("ALLOW_REAL_CASES") != "1",
-            "auth_enabled": os.getenv("APP_ENV") == "production", "identity": vars(current(request)), "capabilities": capabilities(current(request)), "legal_sources": LEGAL,
-            "fact_fields": FACT_FIELDS, "signal_facts": SIGNAL_FACTS, "handler_facts": HANDLER_FACTS,
+            "auth_enabled": os.getenv("APP_ENV") == "production", "identity": vars(identity), "capabilities": capabilities(identity),
+            "demo_role_switch": role_switch,
+            "demo_roles": [{"value": role, "label": ROLE_LABELS[role]} for role in ROLES] if role_switch else [],
+            "legal_sources": LEGAL, "fact_fields": FACT_FIELDS, "signal_facts": SIGNAL_FACTS,
+            "handler_facts": HANDLER_FACTS,
             "warning": "Demonstrator: keine Steuerberatung und keine geprüfte TaxGraph-API-Anbindung."}
 
 

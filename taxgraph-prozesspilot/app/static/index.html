@@ -24,8 +24,12 @@
         <div class="top-separator"></div>
         <span class="env-tag"><span class="env-dot"></span> SYNTHETISCHE FALLDATEN</span>
         <span id="healthBadge" class="health-badge">System wird geladen …</span>
+        <label id="demoRoleControl" class="demo-role-control" hidden>
+          <span>DEMO-ROLLE</span>
+          <select id="demoRoleSelect" aria-label="Demorolle auswählen"></select>
+        </label>
         <span id="identityLabel" class="env-tag" aria-label="Benutzer und Organisation"></span>
-        <a class="api-link" href="/fachpruefung" title="Erweiterte Fachprüfung">Fachprüfung §20 V2 ↗</a>
+        <a id="expertReviewLink" class="api-link" href="/fachpruefung" title="Erweiterte Fachprüfung" hidden>Fachprüfung §20 V2 ↗</a>
         <a class="api-link" href="/api/docs" target="_blank" rel="noopener noreferrer" title="OpenAPI-Dokumentation">API <span aria-hidden="true">↗</span></a>
       </div>
     </header>
