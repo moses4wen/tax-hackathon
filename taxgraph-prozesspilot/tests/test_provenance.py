@@ -13,10 +13,11 @@ def test_element_provenance_uses_revision_snapshots_and_version_review(client):
     assert client.post(f'/api/graphs/{vid}/publish',json={'actor':'Demo Strukturprüfung','confirm_expert_review':True}).status_code == 200
     provenance = client.get(f'/api/graphs/{vid}/provenance').json()
     assert provenance['snapshot_integrity'] and provenance['available']
-    assert [r['actor'] for r in provenance['edges']['E_SCOPE_YES']] == ['Demo Modellierung','Demo Änderung']
+    actor = client.get('/api/config').json()['identity']['username']
+    assert [r['actor'] for r in provenance['edges']['E_SCOPE_YES']] == [actor, actor]
     assert [r['change'] for r in provenance['edges']['E_SCOPE_YES']] == ['created','changed']
     assert len(provenance['edges']['E_SCOPE_NO']) == 1
-    assert provenance['meta']['approved_by'] == 'Demo Strukturprüfung'
+    assert provenance['meta']['approved_by'] == actor
     assert client.get('/api/graphs/umwstg20-v1/provenance').json()['edges']['E_SCOPE_YES'][0]['actor'] == 'Systemdemo'
     run = execute(client,cases_by_letter(client)['A'],vid)
     audit = client.get(f'/api/runs/{run["run_id"]}/audit').json()

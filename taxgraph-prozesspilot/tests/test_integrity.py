@@ -176,7 +176,10 @@ def test_backup_and_startup_preserve_case_and_run(client, tmp_path):
 
 
 @pytest.mark.parametrize('facts', [[{}], [{'key':[]}], [{'key':'does_not_exist'}]])
-def test_invalid_facts_do_not_create_partial_cases(client, facts):
+def test_invalid_facts_do_not_create_partial_cases(client, facts, monkeypatch):
+    # Isolate validation under an editor; viewer/reviewer creation is denied by design.
+    from app.auth import Principal
+    monkeypatch.setattr('app.server.local_principal', lambda role=None: Principal('Validation Author','demo','editor'))
     response = client.post('/api/cases',json={'title':'Ungültiger synthetischer Fall','facts':facts})
     assert response.status_code == 422
     assert len(client.get('/api/cases').json()['cases']) == 4

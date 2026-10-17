@@ -129,6 +129,9 @@ def create_org(c: sqlite3.Connection, org_id: str, label: str) -> None:
     write_graph(c, uid("g"), "org/" + org_id + "/umwstg20", 1, seed_graph(),
                 "published", "Systemdemo", "Synthetisches Referenzmodell", org_id=org_id)
     seed_cases(c, org_id=org_id)
+    from .functional_api import seed_org
+    if c.execute("SELECT 1 FROM sqlite_master WHERE name='process_packages'").fetchone():
+        seed_org(c, org_id)
 
 
 def create_user(c: sqlite3.Connection, username: str, org_id: str, role: str, password: str) -> None:

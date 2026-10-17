@@ -34,8 +34,8 @@ def test_three_roles_and_org_isolation(tmp_path, monkeypatch):
         assert client.get("/api/config",headers=a).json()["capabilities"]["edit_process"] is False
         assert client.get("/api/config",headers=e).json()["capabilities"]["create_process"]
         assert client.get("/api/config",headers=r).json()["capabilities"]["publish_process"]
-        assert client.post("/api/graphs/umwstg20-v1/draft",headers=a,json={"actor":"x"}).status_code==403
-        assert client.post("/api/graphs/umwstg20-v1/draft",headers=b,json={"actor":"x"}).status_code==404
+        assert client.post("/api/graphs/umwstg20-v1/draft",headers=a,json={"actor":"spoofed-author"}).status_code==403
+        assert client.post("/api/graphs/umwstg20-v1/draft",headers=b,json={"actor":"spoofed-author"}).status_code==404
         new_proc=client.post("/api/processes",headers=e,json={"label":"Neue Fallprüfung"}).json()
         assert new_proc["meta"]["status"]=="draft"
         assert new_proc["meta"]["org_id"]=="demo"

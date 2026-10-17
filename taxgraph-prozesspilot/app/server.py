@@ -15,6 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from .legal_review_api import router as legal_review_router
+from .functional_api import router as functional_router, page_router, initialize as initialize_functional
 from .auth import ROLE_LABELS, ROLES, authenticate, current, local_principal, require_role, graph_access, case_access, run_access, capabilities
 from .procedural_map import catalog as procedural_catalog
 from .engine import execute
@@ -30,6 +31,7 @@ STATIC = Path(__file__).resolve().parent / "static"
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     init_db()
+    initialize_functional()
     if os.getenv("APP_ENV") == "production":
         with connect() as c:
             if not c.execute("SELECT 1 FROM app_users WHERE active=1 LIMIT 1").fetchone():
@@ -42,6 +44,8 @@ app = FastAPI(title="processGraph §20 UmwStG", description="Auditierbarer deuts
 app.mount("/assets", StaticFiles(directory=str(STATIC)), name="assets")
 # Fachpruefung-V2 additive integration
 app.include_router(legal_review_router)
+app.include_router(functional_router)
+app.include_router(page_router)
 
 
 def demo_role_switch_enabled() -> bool:
@@ -88,6 +92,10 @@ async def security(request: Request, call_next):
             mutating and identity.role != "reviewer" and
             (request.url.path.endswith("/publish") or request.url.path.endswith("/review"))):
             return JSONResponse({"detail":"Für diese Aktion fehlt die Berechtigung."},status_code=403)
+    if request.method not in ('GET', 'HEAD', 'OPTIONS'):
+        origin = request.headers.get('origin')
+        if origin and origin != str(request.base_url).rstrip('/'):
+            return JSONResponse({'detail': 'Cross-Origin-Schreibzugriff gesperrt.'}, status_code=403)
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
@@ -152,6 +160,11 @@ class PublishRequest(BaseModel):
 
 @app.get("/", include_in_schema=False)
 def home():
+    return FileResponse(STATIC / "functional.html", media_type="text/html")
+
+
+@app.get("/studio", include_in_schema=False)
+def legacy_studio():
     return FileResponse(STATIC / "index.html", media_type="text/html")
 
 
@@ -170,8 +183,8 @@ def config(request: Request):
             "auth_enabled": os.getenv("APP_ENV") == "production", "identity": vars(identity), "capabilities": capabilities(identity),
             "demo_role_switch": role_switch,
             "demo_roles": [{"value": role, "label": ROLE_LABELS[role]} for role in ROLES] if role_switch else [],
-            "legal_sources": LEGAL, "fact_fields": FACT_FIELDS, "signal_facts": SIGNAL_FACTS,
-            "handler_facts": HANDLER_FACTS,
+            "legal_sources": LEGAL,
+            "fact_fields": FACT_FIELDS, "signal_facts": SIGNAL_FACTS, "handler_facts": HANDLER_FACTS,
             "warning": "Demonstrator: keine Steuerberatung und keine geprüfte TaxGraph-API-Anbindung."}
 
 

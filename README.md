@@ -1,5 +1,10 @@
 # Tax-Hackathon
 
+## Integrated process V3
+
+The homepage and `/prozesse` now provide the executable process library: versioned rules, negative-net-asset valuation, evidence-aware branches, organization roles and reproducible audit. The 17 observed source nodes are bound to a local normalized graph; the upstream full edge export remains unverified. Only synthetic cases. See [implementation, legal research, setup and verification limits](taxgraph-prozesspilot/docs/FUNCTIONAL-INTEGRATION.md). Legacy V1/V2 interfaces remain at `/studio` and `/fachpruefung` for historical use.
+
+
 Dieses Repository enthält **processGraph**, einen deutschsprachigen Prototyp für einen strukturierten Ablauf zu § 20 UmwStG. Die Anwendung liegt unter [`taxgraph-prozesspilot/`](taxgraph-prozesspilot/); das bestehende Startskript und die dortige Dokumentation beschreiben den lokalen Betrieb.
 
 Der Prototyp zeigt einen versionierten Prozessgraphen, fallbezogene Tatsachen und Nachweisverweise sowie eine prüfbare Ausführungshistorie. Veröffentlichte Graphdefinitionen, veränderlicher Fallzustand und fortlaufende Ausführungsprotokolle haben getrennte Aufgaben. Der aktuelle Ablauf bildet ein begrenztes Beispiel ab und ist weder eine vollständige Steuersoftware noch eine Steuerberatung.

@@ -33,7 +33,8 @@ def execute(client, case, version='umwstg20-v1'):
 
 def test_home_and_graph(client):
     assert client.get('/').status_code == 200
-    assert 'Einbringungsprüfung' in client.get('/').text
+    assert 'Prozessbibliothek' in client.get('/').text
+    assert 'Einbringungsprüfung' in client.get('/studio').text
     assert client.get('/assets/app.js').status_code == 200
     assert client.get('/api/health').json()['status']=='ok'
     graph=client.get('/api/graphs/umwstg20-v1').json()
@@ -150,7 +151,9 @@ def test_no_unverified_fact_promoted(client):
 
 def test_authentication_when_password_enabled(tmp_path, monkeypatch):
     monkeypatch.setenv('DATABASE_PATH',str(tmp_path/'protected.sqlite3'))
-    monkeypatch.setenv('APP_ENV','production')
+    # Shared password remains a local-demo gate; production requires named accounts.
+    monkeypatch.setenv('APP_ENV','local')
+    monkeypatch.setenv('APP_USER','admin')
     monkeypatch.setenv('APP_PASSWORD','super-secret-long-demo-password')
     with TestClient(app) as c:
         assert c.get('/').status_code==401
